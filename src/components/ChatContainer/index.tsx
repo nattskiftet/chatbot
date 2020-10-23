@@ -376,8 +376,12 @@ export default class ChatContainer extends Component<
     }
 
     lukkOgAvslutt() {
-        clearState();
-        this.setState({...defaultState, erApen: false});
+        this.setState({isClosing: true}, () => {
+            setTimeout(() => {
+                clearState();
+                this.setState({...defaultState, erApen: false});
+            }, 300);
+        });
     }
 
     async hentConfig(): Promise<AxiosResponse<SessionCreateResponse>> {

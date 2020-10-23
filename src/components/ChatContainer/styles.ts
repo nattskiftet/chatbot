@@ -79,7 +79,11 @@ export const Container = styled.div`
 
             ${liten} {
                 width: 100%;
-                height: 100%;
+                ${!props.isClosing &&
+                css`
+                    height: 100%;
+                `}
+
                 bottom: 0;
                 right: 0;
             }
