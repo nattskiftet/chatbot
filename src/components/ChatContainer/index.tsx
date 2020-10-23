@@ -26,6 +26,7 @@ import {Container} from './styles';
 
 export type ChatContainerState = {
     erApen: boolean;
+    isClosing: boolean;
     navn?: string | undefined;
     historie: MessageWithIndicator[];
     ikkeLastetHistorie: MessageWithIndicator[];
@@ -42,6 +43,7 @@ export type ChatContainerState = {
 
 const defaultState: ChatContainerState = {
     erApen: false,
+    isClosing: false,
     navn: 'Chatbot Frida',
     historie: [],
     ikkeLastetHistorie: [],
@@ -145,16 +147,7 @@ export default class ChatContainer extends Component<
         const {queueKey, customerKey} = this.props;
 
         return (
-            <Container
-                ref={this.reference as any}
-                erApen={this.state.erApen}
-                tabIndex={this.state.erApen ? 0 : -1}
-                aria-label={
-                    this.state.erApen ? `Samtalevindu: ${navn}` : undefined
-                }
-                lang={this.state.erApen ? 'no' : undefined}
-                role={this.state.erApen ? 'dialog' : undefined}
-            >
+            <>
                 {!this.state.erApen && (
                     <FridaKnappContainer
                         navn={navn}
@@ -164,47 +157,60 @@ export default class ChatContainer extends Component<
                     />
                 )}
 
-                {this.state.erApen && (
-                    <ToppBar
-                        navn={
-                            this.state.brukere.some(
-                                (bruker: Bruker) =>
-                                    bruker.userType === userTypeConstants.human
-                            )
-                                ? `Chat med NAV`
-                                : navn
-                        }
-                        lukk={async () => this.lukk()}
-                        omstart={async () => this.omstart()}
-                        avslutt={async () => this.avslutt(true)}
-                    />
-                )}
-
-                <Interaksjonsvindu
-                    skjulIndikator={(melding: MessageWithIndicator) =>
-                        this.skjulIndikator(melding)
+                <Container
+                    ref={this.reference as any}
+                    erApen={this.state.erApen}
+                    isClosing={this.state.isClosing}
+                    tabIndex={this.state.erApen ? 0 : -1}
+                    aria-label={
+                        this.state.erApen ? `Samtalevindu: ${navn}` : undefined
                     }
-                    vis={this.state.erApen}
-                    queueKey={queueKey}
-                    customerKey={customerKey}
-                    baseUrl={this.baseUrl}
-                    historie={this.state.historie}
-                    brukere={this.state.brukere}
-                    iKo={this.state.iKo}
-                    avsluttet={this.state.avsluttet}
-                    config={this.state.config}
-                    skriveindikatorTid={this.skriveindikatorTid}
-                    hentHistorie={async () => this.hentHistorie()}
-                    visBekreftelse={this.state.visBekreftelse}
-                    confirmAvslutt={async () => this.confirmAvslutt()}
-                    confirmOmstart={async () => this.confirmOmstart()}
-                    confirmCancel={async () => this.confirmCancel()}
-                    lukk={async () => this.lukk()}
-                    feil={this.state.feil}
-                    analyticsCallback={this.props.analyticsCallback}
-                    analyticsSurvey={this.props.analyticsSurvey}
-                />
-            </Container>
+                    lang={this.state.erApen ? 'no' : undefined}
+                    role={this.state.erApen ? 'dialog' : undefined}
+                >
+                    {this.state.erApen && (
+                        <ToppBar
+                            navn={
+                                this.state.brukere.some(
+                                    (bruker: Bruker) =>
+                                        bruker.userType ===
+                                        userTypeConstants.human
+                                )
+                                    ? `Chat med NAV`
+                                    : navn
+                            }
+                            lukk={async () => this.lukk()}
+                            omstart={async () => this.omstart()}
+                            avslutt={async () => this.avslutt(true)}
+                        />
+                    )}
+
+                    <Interaksjonsvindu
+                        skjulIndikator={(melding: MessageWithIndicator) =>
+                            this.skjulIndikator(melding)
+                        }
+                        vis={this.state.erApen}
+                        queueKey={queueKey}
+                        customerKey={customerKey}
+                        baseUrl={this.baseUrl}
+                        historie={this.state.historie}
+                        brukere={this.state.brukere}
+                        iKo={this.state.iKo}
+                        avsluttet={this.state.avsluttet}
+                        config={this.state.config}
+                        skriveindikatorTid={this.skriveindikatorTid}
+                        hentHistorie={async () => this.hentHistorie()}
+                        visBekreftelse={this.state.visBekreftelse}
+                        confirmAvslutt={async () => this.confirmAvslutt()}
+                        confirmOmstart={async () => this.confirmOmstart()}
+                        confirmCancel={async () => this.confirmCancel()}
+                        lukk={async () => this.lukk()}
+                        feil={this.state.feil}
+                        analyticsCallback={this.props.analyticsCallback}
+                        analyticsSurvey={this.props.analyticsSurvey}
+                    />
+                </Container>
+            </>
         );
     }
 
@@ -299,9 +305,13 @@ export default class ChatContainer extends Component<
     }
 
     async lukk() {
-        this.setState({erApen: false});
-        setCookie(chatStateKeys.APEN, false);
-        this.analytics('chat-lukket', {komponent: 'frida'});
+        this.setState({isClosing: true}, () => {
+            setTimeout(() => {
+                this.setState({erApen: false, isClosing: false});
+                setCookie(chatStateKeys.APEN, false);
+                this.analytics('chat-lukket', {komponent: 'frida'});
+            }, 300);
+        });
     }
 
     omstart() {
