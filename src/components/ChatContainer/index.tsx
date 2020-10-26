@@ -148,7 +148,7 @@ export default class ChatContainer extends Component<
 
         return (
             <>
-                {(this.state.isClosing || !this.state.erApen) && (
+                {(!this.state.erApen) && (
                     <FridaKnappContainer
                         navn={navn}
                         queueKey={this.props.queueKey}
