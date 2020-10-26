@@ -10,6 +10,7 @@ const tema = {
         }
     },
     farger: {
+        fokus: '#005b82',
         snakkebobler: {
             bruker: '#E0F5FB',
             agent: '#CDE7D8',
@@ -26,10 +27,7 @@ const tema = {
         },
         skriveIndikator: {
             bakgrunn: '#E7E9E9',
-            dot: {
-                aktiv: '#59514B',
-                inaktiv: '#B7B1A9'
-            }
+            dot: '#a29c93'
         },
         alertstripe: {
             info: {

@@ -2,6 +2,7 @@ import styled from 'styled-components';
 import {userTypeConstants} from '../../constants';
 import fridaIkon from '../../assets/frida.svg';
 import tema from '../../tema/tema';
+import {Indikator} from '../Skriveindikator/styles';
 
 type Properties = {
     side?: 'VENSTRE' | 'HOYRE';

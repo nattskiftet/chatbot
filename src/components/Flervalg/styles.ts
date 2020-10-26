@@ -1,7 +1,7 @@
 import styled, {css} from 'styled-components';
 import tema from '../../tema/tema';
 import selectedIcon from '../../assets/selected.svg';
-import {Indikator} from '../Skriveindikator/styles';
+import {Indikator, IndikatorPrikk} from '../Skriveindikator/styles';
 import {ValgProperties} from '.';
 
 export const ValgBoks = styled.ul`
@@ -116,6 +116,14 @@ export const Valg = styled.li`
             margin-left: 15px;
             margin-right: 5px;
             padding: 0;
+        }
+
+        ${IndikatorPrikk} {
+            ${(properties: ValgProperties) =>
+                properties.isChosen &&
+                css`
+                    background-color: ${tema.farger.fokus};
+                `}
         }
     }
 `;

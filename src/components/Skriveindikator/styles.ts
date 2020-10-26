@@ -3,7 +3,7 @@ import tema from '../../tema/tema';
 
 const blink = keyframes`
     50% {
-        background: ${tema.farger.skriveIndikator.dot.aktiv};
+        opacity: 0.2;
     }
 `;
 
@@ -25,6 +25,7 @@ export const Boks = styled.div`
 export const Indikator = styled.div`
     padding: 10px;
     border-radius: 10px;
+    border-radius: 0 10px 10px 10px;
     background: ${tema.farger.skriveIndikator.bakgrunn};
     display: inline-flex;
     animation: ${visAnimasjon} 300ms;
@@ -33,7 +34,7 @@ export const Indikator = styled.div`
 export const IndikatorPrikk = styled.span`
     height: 10px;
     width: 10px;
-    background: ${tema.farger.skriveIndikator.dot.inaktiv};
+    background: ${tema.farger.skriveIndikator.dot};
     border-radius: 50%;
     margin-right: 10px;
 

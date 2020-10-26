@@ -32,7 +32,7 @@ export const Container = styled.div`
 
     *:focus {
         outline: none;
-        box-shadow: 0 0 0 3px #005b82;
+        box-shadow: 0 0 0 3px ${tema.farger.fokus};
     }
 
     ${liten} {
