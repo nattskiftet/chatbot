@@ -32,7 +32,7 @@ export const Tekstomrade = styled.form`
     border-top: 1px solid ${tema.farger.tekstfelt};
     height: 20%;
     width: 100%;
-    padding: 15px;
+    padding: 14px;
     align-items: center;
     min-height: 85px;
     z-index: 10;

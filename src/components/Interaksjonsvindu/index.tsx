@@ -394,6 +394,7 @@ const Interaksjonsvindu = (properties: Properties) => {
 
                     <Tekstomrade onSubmit={handleSubmit}>
                         <Tekstfelt
+                            aria-label="Ditt spørsmål"
                             placeholder='Skriv spørsmålet ditt'
                             disabled={avsluttet}
                             value={message}
