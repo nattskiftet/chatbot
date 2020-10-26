@@ -85,6 +85,7 @@ export const FridaKnapp = styled.button`
     }
 
     &:focus {
+        outline: none;
         box-shadow: none !important;
 
         ${FridaTekst} {
