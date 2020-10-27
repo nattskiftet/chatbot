@@ -3,7 +3,7 @@ import 'react-app-polyfill/stable';
 
 import React, {createContext, useContext, useState, useEffect} from 'react';
 
-import axios from 'axios';
+import axios, {AxiosError} from 'axios';
 import cookies from 'js-cookie';
 
 const apiUrlBase = 'https://navtest.boost.ai/api/chat/v2';
@@ -159,6 +159,36 @@ async function postBoostSession(
     return response.data;
 }
 
+interface BoostPingRequestResponse {
+    conversation: BoostConversation;
+}
+
+async function pingBoostSession(
+    conversationId: string
+): Promise<BoostPingRequestResponse> {
+    const response = await axios.post(apiUrlBase, {
+        command: 'TYPING',
+        conversation_id: conversationId
+    });
+
+    return response.data;
+}
+
+interface BoostDeleteRequestResponse {
+    conversation: BoostConversation;
+}
+
+async function deleteBoostSession(
+    conversationId: string
+): Promise<BoostDeleteRequestResponse> {
+    const response = await axios.post(apiUrlBase, {
+        command: 'DELETE',
+        conversation_id: conversationId
+    });
+
+    return response.data;
+}
+
 type BoostRequestResponse =
     | BoostStartRequestResponse
     | BoostResumeRequestResponse
@@ -190,6 +220,23 @@ function useLoader() {
     return [isLoading, createLoader] as const;
 }
 
+function useDebouncedEffect(
+    timeout: number,
+    callback: React.EffectCallback,
+    dependencies: React.DependencyList
+) {
+    const [previousTimestamp, setPreviousTimestamp] = useState(0);
+
+    return useEffect(() => {
+        const currentTimestamp = Date.now();
+
+        if (previousTimestamp + timeout < currentTimestamp) {
+            setPreviousTimestamp(currentTimestamp);
+            callback();
+        }
+    }, dependencies);
+}
+
 interface Language {
     language?: string;
     setLanguage?: (language: string) => void;
@@ -219,6 +266,14 @@ const LanguageProvider = (properties: Record<string, unknown>) => {
 const useLanguage = () => useContext(LanguageContext);
 
 interface Session {
+    id?: string;
+    status?:
+        | 'initializing'
+        | 'connected'
+        | 'loading'
+        | 'restarting'
+        | 'error'
+        | 'ended';
     queue?: BoostResponse;
     session?: {
         conversation: BoostConversation;
@@ -227,12 +282,15 @@ interface Session {
     isInitializing?: boolean;
     isLoading?: boolean;
     sendMessage?: (message: string) => Promise<void>;
-    sendAction?: (id: string) => Promise<void>;
+    sendAction?: (actionId: string) => Promise<void>;
+    sendPing?: () => Promise<void>;
+    restart?: () => Promise<void>;
 }
 
 const SessionContext = createContext<Session>({});
 
 const SessionProvider = (properties: Record<string, unknown>) => {
+    const [status, setStatus] = useState<Session['status']>('initializing');
     const [isLoading, setIsLoading] = useLoader();
     const {language, setLanguage} = useLanguage();
     const [savedConversationId] = useState<string | undefined>(() =>
@@ -242,6 +300,17 @@ const SessionProvider = (properties: Record<string, unknown>) => {
     const [queue, setQueue] = useState<BoostResponse>();
     const [session, setSession] = useState<Session['session'] | undefined>();
     const conversationId = session?.conversation.id;
+
+    function handleError(error: any) {
+        if (error?.response) {
+            if (error.response.data.error === 'session ended') {
+                setStatus('ended');
+                return;
+            }
+        }
+
+        setStatus('error');
+    }
 
     async function updateSession(updates: BoostRequestResponse) {
         const responses =
@@ -348,7 +417,13 @@ const SessionProvider = (properties: Record<string, unknown>) => {
                 };
             });
 
-            await postBoostSession(conversationId, {type: 'text', message});
+            await postBoostSession(conversationId, {
+                type: 'text',
+                message
+            }).catch((error) => {
+                void handleError(error);
+            });
+
             finishLoading();
         }
     }
@@ -356,37 +431,107 @@ const SessionProvider = (properties: Record<string, unknown>) => {
     async function sendAction(id: string) {
         if (session && conversationId) {
             const finishLoading = setIsLoading();
-            await postBoostSession(conversationId, {type: 'action_link', id});
+            await postBoostSession(conversationId, {
+                type: 'action_link',
+                id
+            }).catch((error) => {
+                void handleError(error);
+            });
+
             finishLoading();
         }
     }
 
+    async function sendPing() {
+        if (session && conversationId) {
+            await pingBoostSession(conversationId).catch((error) => {
+                console.error(error);
+            });
+        }
+    }
+
+    async function restart() {
+        setStatus('restarting');
+
+        if (session && conversationId) {
+            await deleteBoostSession(conversationId).catch((error) => {
+                console.error(error);
+            });
+        }
+
+        const finishLoading = setIsLoading();
+        setSession(undefined);
+        setQueue(undefined);
+
+        try {
+            const createdSession = await createBoostSession();
+
+            cookies.set(
+                conversationIdCookieName,
+                createdSession.conversation.id
+            );
+
+            void updateSession(createdSession);
+        } catch (error) {
+            handleError(error);
+        }
+
+        finishLoading();
+    }
+
     useEffect(() => {
+        let shouldUpdate = true;
         const finishLoading = setIsLoading();
 
         if (savedConversationId) {
-            void getBoostSession(savedConversationId, {language}).then(
-                (retrievedSession) => {
-                    void updateSession(retrievedSession);
-                    finishLoading();
-                }
-            );
-        } else {
-            void createBoostSession().then((createdSession) => {
-                cookies.set(
-                    conversationIdCookieName,
-                    createdSession.conversation.id
-                );
+            void getBoostSession(savedConversationId, {language})
+                .then((retrievedSession) => {
+                    if (shouldUpdate) {
+                        void updateSession(retrievedSession);
+                    }
 
-                void updateSession(createdSession);
-                finishLoading();
-            });
+                    finishLoading();
+                })
+                .catch((error) => {
+                    if (shouldUpdate) {
+                        void handleError(error);
+                    }
+
+                    finishLoading();
+                });
+        } else {
+            void createBoostSession()
+                .then((createdSession) => {
+                    if (shouldUpdate) {
+                        cookies.set(
+                            conversationIdCookieName,
+                            createdSession.conversation.id
+                        );
+
+                        void updateSession(createdSession);
+                    }
+
+                    finishLoading();
+                })
+                .catch((error) => {
+                    if (shouldUpdate) {
+                        void handleError(error);
+                    }
+
+                    finishLoading();
+                });
         }
+
+        return () => {
+            shouldUpdate = false;
+            finishLoading();
+        };
     }, [savedConversationId]);
 
     useEffect(() => {
         if (session && conversationId) {
             let timeout: number | undefined;
+            let shouldUpdate = true;
 
             const poll = async () => {
                 const [mostRecentResponse] = session.responses.slice(-1);
@@ -394,13 +539,21 @@ const SessionProvider = (properties: Record<string, unknown>) => {
 
                 await pollBoostSession(conversationId, {
                     mostRecentResponseId
-                }).then((updatedSession) => {
-                    if (updatedSession.responses.length === 0) {
-                        return;
-                    }
+                })
+                    .then((updatedSession) => {
+                        if (updatedSession.responses.length === 0) {
+                            return;
+                        }
 
-                    void updateSession(updatedSession);
-                });
+                        if (shouldUpdate) {
+                            void updateSession(updatedSession);
+                        }
+                    })
+                    .catch((error) => {
+                        if (shouldUpdate) {
+                            void handleError(error);
+                        }
+                    });
 
                 timeout = setTimeout(poll, 1000);
             };
@@ -408,6 +561,8 @@ const SessionProvider = (properties: Record<string, unknown>) => {
             timeout = setTimeout(poll, 1000);
 
             return () => {
+                shouldUpdate = false;
+
                 if (timeout) {
                     clearTimeout(timeout);
                 }
@@ -419,16 +574,32 @@ const SessionProvider = (properties: Record<string, unknown>) => {
 
     const isInitializing = isLoading && !session;
 
+    useEffect(() => {
+        if (isLoading) {
+            if (session) {
+                setStatus('loading');
+            } else {
+                setStatus('initializing');
+            }
+        } else if (session) {
+            setStatus('connected');
+        }
+    }, [session, isLoading]);
+
     return (
         <SessionContext.Provider
             {...properties}
             value={{
+                id: conversationId,
+                status,
                 queue,
                 session,
                 isInitializing,
                 isLoading,
                 sendMessage,
-                sendAction
+                sendAction,
+                sendPing,
+                restart
             }}
         />
     );
@@ -589,28 +760,35 @@ const ResponseElement = ({
 };
 
 interface ResponseProperties
-    extends Omit<ResponseElementProperties, 'element'> {}
+    extends Omit<ResponseElementProperties, 'element'> {
+    responsesLength?: number;
+}
 
 const Response = ({
     response,
     responseIndex,
+    responsesLength,
     ...properties
 }: ResponseProperties) => {
     const responseDate = new Date(response.date_created);
     const responseTimestamp = responseDate.getTime();
     let typingRevealTimestamp = 0;
+    let revealTimestamp = 0;
 
-    if (response.source === 'bot') {
+    const shouldObscure =
+        response.source === 'bot' &&
+        responseIndex === (responsesLength ?? 1) - 1;
+
+    if (shouldObscure) {
         typingRevealTimestamp =
             responseIndex === 0
                 ? responseTimestamp
                 : responseTimestamp + botResponseRevealDelay;
+        revealTimestamp =
+            typingRevealTimestamp +
+            botResponseRevealDelayBuffer +
+            botResponseRevealDelayBuffer * Math.random();
     }
-
-    const revealTimestamp =
-        typingRevealTimestamp +
-        botResponseRevealDelayBuffer +
-        botResponseRevealDelayBuffer * Math.random();
 
     return (
         <Obscured untilTimestamp={typingRevealTimestamp}>
@@ -628,17 +806,19 @@ const Response = ({
                         let elementTypingRevealTimestamp = 0;
                         let elementRevealTimestamp = 0;
 
-                        if (response.source === 'bot') {
+                        if (shouldObscure) {
                             if (index !== 0) {
                                 elementTypingRevealTimestamp =
                                     revealTimestamp +
                                     botResponseRevealDelay * index;
 
                                 elementRevealTimestamp =
-                                    elementTypingRevealTimestamp +
-                                    botResponseRevealDelayBuffer +
-                                    botResponseRevealDelayBuffer *
-                                        Math.random();
+                                    element.type === 'links'
+                                        ? elementTypingRevealTimestamp
+                                        : elementTypingRevealTimestamp +
+                                          botResponseRevealDelayBuffer +
+                                          botResponseRevealDelayBuffer *
+                                              Math.random();
                             }
                         }
 
@@ -667,11 +847,14 @@ const Response = ({
 
 const Chat = () => {
     const {
+        id,
+        status,
         session,
         queue,
-        isInitializing,
         sendMessage,
-        sendAction
+        sendAction,
+        sendPing,
+        restart
     } = useSession();
 
     const {language} = useLanguage();
@@ -701,6 +884,22 @@ const Chat = () => {
         }
     }
 
+    function handleRestart() {
+        void restart!();
+    }
+
+    useDebouncedEffect(
+        2000,
+        () => {
+            if (id && message) {
+                void sendPing!();
+            }
+        },
+        [message]
+    );
+
+    const responsesLength = session?.responses.length;
+
     return (
         <div>
             <p>
@@ -713,13 +912,19 @@ const Chat = () => {
             </p>
 
             <ul>
-                {isInitializing ? 'Kobler til...' : 'Koblet til.'}
+                {status === 'initializing' && 'Kobler til...'}
+                {(status === 'connected' || status === 'loading') &&
+                    'Tilkoblet.'}
+                {status === 'restarting' && 'Starter på nytt...'}
+                {status === 'ended' && 'Samtalen er avsluttet.'}
+                {status === 'error' && 'Feil.'}
 
                 {session?.responses.map((response, index) => (
                     <Response
                         key={response.id}
                         {...{response}}
                         responseIndex={index}
+                        responsesLength={responsesLength}
                         responses={session.responses}
                         onAction={handleAction}
                     />
@@ -738,6 +943,9 @@ const Chat = () => {
                 />
 
                 <button type='submit'>Send</button>
+                <button type='button' onClick={handleRestart}>
+                    Restart
+                </button>
             </form>
         </div>
     );
