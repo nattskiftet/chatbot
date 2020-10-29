@@ -259,7 +259,7 @@ function useDebouncedEffect(
             setPreviousTimestamp(currentTimestamp);
             callback();
         }
-    }, dependencies);
+    }, [...dependencies, timeout, previousTimestamp, callback]);
 }
 
 interface Language {
@@ -304,11 +304,9 @@ interface Session {
         | 'error'
         | 'ended';
     error?: SessionError;
+    conversation?: BoostConversation;
+    responses?: BoostResponse[];
     queue?: BoostResponse;
-    session?: {
-        conversation: BoostConversation;
-        responses: BoostResponse[];
-    };
     isLoading?: boolean;
     start?: () => Promise<void>;
     restart?: () => Promise<void>;
@@ -329,9 +327,16 @@ const SessionProvider = (properties: Record<string, unknown>) => {
         string | undefined
     >(() => cookies.get(conversationIdCookieName));
 
+    const [conversation, setConversation] = useState<
+        BoostConversation | undefined
+    >();
+
+    const conversationId = conversation?.id;
+    const conversationState = conversation?.state;
+    const canDeleteConversation = conversationState?.allow_delete_conversation;
+
+    const [responses, setResponses] = useState<BoostResponse[] | undefined>();
     const [queue, setQueue] = useState<BoostResponse>();
-    const [session, setSession] = useState<Session['session'] | undefined>();
-    const conversationId = session?.conversation.id;
 
     const handleError = useCallback((error: any) => {
         if (error?.response) {
@@ -352,11 +357,25 @@ const SessionProvider = (properties: Record<string, unknown>) => {
 
     const updateSession = useCallback(
         async (updates: BoostRequestResponse) => {
+            const currentConversationState = JSON.stringify(conversationState);
+            const updatedConversationState = JSON.stringify(
+                updates.conversation.state
+            );
+
+            if (currentConversationState !== updatedConversationState) {
+                setConversation(updates.conversation);
+            }
+
             const responses =
                 'response' in updates ? [updates.response] : updates.responses;
+
+            if (responses.length === 0) {
+                return;
+            }
+
             const [mostRecentResponse] = responses.slice(-1);
 
-            if (mostRecentResponse.language) {
+            if (mostRecentResponse?.language) {
                 setLanguage!(mostRecentResponse.language);
             }
 
@@ -391,53 +410,46 @@ const SessionProvider = (properties: Record<string, unknown>) => {
                 return previousQueue;
             });
 
-            setSession((previousSession) => {
-                if (previousSession) {
-                    const updatedResponses = previousSession.responses;
+            setResponses((previousResponses) => {
+                if (previousResponses) {
                     const currentResponseIds = new Set(
-                        updatedResponses.map((index) => String(index.id))
+                        previousResponses.map((index) => String(index.id))
                     );
 
                     responses.forEach((response) => {
                         if (!currentResponseIds.has(String(response.id))) {
-                            updatedResponses.push(response);
+                            previousResponses.push(response);
                         }
                     });
 
-                    updatedResponses.sort(
+                    previousResponses.sort(
                         (a, b) =>
                             new Date(a.date_created).getTime() -
                             new Date(b.date_created).getTime()
                     );
 
-                    return {
-                        conversation: updates.conversation,
-                        responses: updatedResponses
-                    };
+                    return previousResponses.slice();
                 }
 
                 if ('response' in updates) {
-                    return {
-                        conversation: updates.conversation,
-                        responses: [
-                            {
-                                ...updates.response,
-                                // NOTE: 'START' request returns wrong creation date (shifted one hour back)
-                                date_created: new Date().toISOString()
-                            }
-                        ]
-                    };
+                    return [
+                        {
+                            ...updates.response,
+                            // NOTE: 'START' request returns wrong creation date (shifted one hour back)
+                            date_created: new Date().toISOString()
+                        }
+                    ];
                 }
 
-                return updates;
+                return updates.responses;
             });
         },
-        [setLanguage]
+        [conversationState, setLanguage]
     );
 
     const sendMessage = useCallback(
         async (message: string) => {
-            if (session && conversationId) {
+            if (conversationId) {
                 const finishLoading = setIsLoading();
 
                 setQueue((previousQueue) => {
@@ -469,12 +481,12 @@ const SessionProvider = (properties: Record<string, unknown>) => {
                 finishLoading();
             }
         },
-        [session, conversationId, setIsLoading, handleError]
+        [conversationId, setIsLoading, handleError]
     );
 
     const sendAction = useCallback(
         async (id: string) => {
-            if (session && conversationId) {
+            if (conversationId) {
                 const finishLoading = setIsLoading();
 
                 await postBoostSession(conversationId, {
@@ -487,16 +499,16 @@ const SessionProvider = (properties: Record<string, unknown>) => {
                 finishLoading();
             }
         },
-        [session, conversationId, setIsLoading, handleError]
+        [conversationId, setIsLoading, handleError]
     );
 
     const sendPing = useCallback(async () => {
-        if (session && conversationId) {
+        if (conversationId) {
             await pingBoostSession(conversationId).catch((error) => {
                 console.error(error);
             });
         }
-    }, [session, conversationId]);
+    }, [conversationId]);
 
     const start = useCallback(async () => {
         const finishLoading = setIsLoading();
@@ -540,19 +552,15 @@ const SessionProvider = (properties: Record<string, unknown>) => {
         const finishLoading = setIsLoading();
         setStatus('restarting');
 
-        if (session && conversationId) {
-            const isDeletionAllowed =
-                session.conversation.state.allow_delete_conversation;
-
-            if (isDeletionAllowed) {
-                await deleteBoostSession(conversationId).catch((error) => {
-                    console.error(error);
-                });
-            }
+        if (conversationId && canDeleteConversation) {
+            await deleteBoostSession(conversationId).catch((error) => {
+                console.error(error);
+            });
         }
 
         setSavedConversationId(undefined);
-        setSession(undefined);
+        setConversation(undefined);
+        setResponses(undefined);
         setQueue(undefined);
 
         try {
@@ -563,40 +571,42 @@ const SessionProvider = (properties: Record<string, unknown>) => {
         }
 
         finishLoading();
-    }, [session, conversationId, setIsLoading, updateSession, handleError]);
+    }, [
+        conversationId,
+        canDeleteConversation,
+        setIsLoading,
+        updateSession,
+        handleError
+    ]);
 
     const finish = useCallback(async () => {
         const finishLoading = setIsLoading();
         setStatus('ended');
 
-        if (session && conversationId) {
-            const isDeletionAllowed =
-                session.conversation.state.allow_delete_conversation;
-
-            if (isDeletionAllowed) {
-                await deleteBoostSession(conversationId).catch((error) => {
-                    console.error(error);
-                });
-            }
+        if (conversationId && canDeleteConversation) {
+            await deleteBoostSession(conversationId).catch((error) => {
+                console.error(error);
+            });
         }
 
         setSavedConversationId(undefined);
-        setSession(undefined);
+        setConversation(undefined);
+        setResponses(undefined);
         setQueue(undefined);
         finishLoading();
-    }, [session, conversationId, setIsLoading]);
+    }, [conversationId, canDeleteConversation, setIsLoading]);
 
     useEffect(() => {
-        if (session && conversationId) {
+        if (conversationId) {
             let timeout: number | undefined;
             let shouldUpdate = true;
 
             const poll = async () => {
-                if (!session || !conversationId || !shouldUpdate) {
+                if (!conversationId || !shouldUpdate) {
                     return;
                 }
 
-                const [mostRecentResponse] = session.responses.slice(-1);
+                const [mostRecentResponse] = (responses ?? []).slice(-1);
                 const mostRecentResponseId = mostRecentResponse.id;
 
                 await pollBoostSession(conversationId, {
@@ -607,10 +617,6 @@ const SessionProvider = (properties: Record<string, unknown>) => {
                             if (shouldUpdate) {
                                 setStatus('connected');
                             }
-                        }
-
-                        if (updatedSession.responses.length === 0) {
-                            return;
                         }
 
                         if (shouldUpdate) {
@@ -638,7 +644,7 @@ const SessionProvider = (properties: Record<string, unknown>) => {
         }
 
         return undefined;
-    }, [status, session, conversationId, updateSession, handleError]);
+    }, [status, conversationId, responses, updateSession, handleError]);
 
     useEffect(() => {
         if (conversationId) {
@@ -656,8 +662,9 @@ const SessionProvider = (properties: Record<string, unknown>) => {
                 id: conversationId,
                 status,
                 error,
+                conversation,
+                responses,
                 queue,
-                session,
                 isLoading,
                 sendMessage,
                 sendAction,
@@ -992,8 +999,8 @@ const IntroStripe = () => {
 };
 
 const StatusStripe = () => {
-    const {session, error, status} = useSession();
-    const conversationStatus = session?.conversation.state.chat_status;
+    const {conversation, error, status} = useSession();
+    const conversationStatus = conversation?.state.chat_status;
 
     switch (status) {
         case 'restarting': {
@@ -1120,9 +1127,9 @@ const RestartKnapp = styled(Knapp)`
 const Chat = () => {
     const {
         id,
-        isLoading,
         status,
-        session,
+        conversation,
+        responses,
         queue,
         start,
         restart,
@@ -1142,11 +1149,10 @@ const Chat = () => {
         () => Number.parseInt(String(cookies.get(unreadCookieName)), 10) || 0
     );
 
-    const responsesLength = session?.responses.length;
-    const conversationStatus = session?.conversation.state.chat_status;
-    const messageMaxCharacters =
-        session?.conversation.state.max_input_chars ?? 110;
-    const isAgentTyping = session?.conversation.state.human_is_typing;
+    const responsesLength = responses?.length;
+    const conversationStatus = conversation?.state.chat_status;
+    const messageMaxCharacters = conversation?.state.max_input_chars ?? 110;
+    const isAgentTyping = conversation?.state.human_is_typing;
 
     const scrollToBottom = useCallback(() => {
         if (anchor.current) {
@@ -1204,6 +1210,7 @@ const Chat = () => {
 
     const handleClose = useCallback(() => {
         setIsOpen(false);
+        setUnreadCount(0);
     }, []);
 
     const handleRestart = useCallback(() => {
@@ -1234,10 +1241,10 @@ const Chat = () => {
             status === 'error'
         ) {
             setUnreadCount(0);
-        } else if (session && status === 'connected') {
+        } else if (status === 'connected') {
             setUnreadCount((number) => number + 1);
         }
-    }, [status, session]);
+    }, [status, responses]);
 
     useEffect(() => {
         scrollToBottom();
@@ -1308,17 +1315,18 @@ const Chat = () => {
                                 <IntroStripe />
                             </Stripe>
 
-                            {session?.responses.map((response, index) => (
+                            {responses?.map((response, index) => (
                                 <Response
                                     key={response.id}
-                                    {...{response}}
+                                    {...{response, responses}}
                                     responseIndex={index}
                                     responsesLength={responsesLength}
-                                    responses={session.responses}
                                     onAction={handleAction}
                                     onReveal={scrollToBottom}
                                 />
                             ))}
+
+                            {isAgentTyping && <TypingIndicator />}
 
                             {queue && <Response response={queue} />}
 
