@@ -259,6 +259,7 @@ function useDebouncedEffect(
             setPreviousTimestamp(currentTimestamp);
             callback();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [...dependencies, timeout, previousTimestamp, callback]);
 }
 
@@ -323,6 +324,7 @@ const SessionProvider = (properties: Record<string, unknown>) => {
     const [error, setError] = useState<SessionError>();
     const [isLoading, setIsLoading] = useLoader();
     const {language, setLanguage} = useLanguage();
+
     const [savedConversationId, setSavedConversationId] = useState<
         string | undefined
     >(() => cookies.get(conversationIdCookieName));
@@ -355,14 +357,85 @@ const SessionProvider = (properties: Record<string, unknown>) => {
         setStatus('error');
     }, []);
 
-    const updateSession = useCallback(
-        async (updates: BoostRequestResponse) => {
-            const currentConversationState = JSON.stringify(conversationState);
-            const updatedConversationState = JSON.stringify(
-                updates.conversation.state
-            );
+    const sendMessage = useCallback(
+        async (message: string) => {
+            if (conversationId) {
+                const finishLoading = setIsLoading();
 
-            if (currentConversationState !== updatedConversationState) {
+                setQueue((previousQueue) => {
+                    if (!previousQueue) {
+                        previousQueue = {
+                            id: 'local',
+                            source: 'local',
+                            date_created: new Date().toISOString(),
+                            elements: []
+                        };
+                    }
+
+                    return {
+                        ...previousQueue,
+                        elements: previousQueue.elements.concat({
+                            type: 'text',
+                            payload: {text: message}
+                        })
+                    };
+                });
+
+                await postBoostSession(conversationId, {
+                    type: 'text',
+                    message
+                }).catch((error) => {
+                    void handleError(error);
+                });
+
+                finishLoading();
+            }
+        },
+        [conversationId, setIsLoading, handleError]
+    );
+
+    const sendAction = useCallback(
+        async (id: string) => {
+            if (conversationId) {
+                const finishLoading = setIsLoading();
+
+                await postBoostSession(conversationId, {
+                    type: 'action_link',
+                    id
+                }).catch((error) => {
+                    void handleError(error);
+                });
+
+                finishLoading();
+            }
+        },
+        [conversationId, setIsLoading, handleError]
+    );
+
+    const sendPing = useCallback(async () => {
+        if (conversationId) {
+            await pingBoostSession(conversationId).catch((error) => {
+                console.error(error);
+            });
+        }
+    }, [conversationId]);
+
+    const update = useCallback(
+        (updates: BoostRequestResponse) => {
+            if (conversation) {
+                if (conversationId === updates.conversation.id) {
+                    const currentState = JSON.stringify(conversationState);
+                    const updatedState = JSON.stringify(
+                        updates.conversation.state
+                    );
+
+                    if (currentState !== updatedState) {
+                        setConversation(updates.conversation);
+                    }
+                } else {
+                    setConversation(updates.conversation);
+                }
+            } else {
                 setConversation(updates.conversation);
             }
 
@@ -432,83 +505,18 @@ const SessionProvider = (properties: Record<string, unknown>) => {
                 }
 
                 if ('response' in updates) {
-                    return [
-                        {
-                            ...updates.response,
-                            // NOTE: 'START' request returns wrong creation date (shifted one hour back)
-                            date_created: new Date().toISOString()
-                        }
-                    ];
+                    const response = updates.response;
+                    response.date_created = new Date().toISOString();
+                    // NOTE: 'START' request returns wrong creation date (shifted one hour back)
+
+                    return [response];
                 }
 
                 return updates.responses;
             });
         },
-        [conversationState, setLanguage]
+        [conversation, conversationId, conversationState, setLanguage]
     );
-
-    const sendMessage = useCallback(
-        async (message: string) => {
-            if (conversationId) {
-                const finishLoading = setIsLoading();
-
-                setQueue((previousQueue) => {
-                    if (!previousQueue) {
-                        previousQueue = {
-                            id: 'local',
-                            source: 'local',
-                            date_created: new Date().toISOString(),
-                            elements: []
-                        };
-                    }
-
-                    return {
-                        ...previousQueue,
-                        elements: previousQueue.elements.concat({
-                            type: 'text',
-                            payload: {text: message}
-                        })
-                    };
-                });
-
-                await postBoostSession(conversationId, {
-                    type: 'text',
-                    message
-                }).catch((error) => {
-                    void handleError(error);
-                });
-
-                finishLoading();
-            }
-        },
-        [conversationId, setIsLoading, handleError]
-    );
-
-    const sendAction = useCallback(
-        async (id: string) => {
-            if (conversationId) {
-                const finishLoading = setIsLoading();
-
-                await postBoostSession(conversationId, {
-                    type: 'action_link',
-                    id
-                }).catch((error) => {
-                    void handleError(error);
-                });
-
-                finishLoading();
-            }
-        },
-        [conversationId, setIsLoading, handleError]
-    );
-
-    const sendPing = useCallback(async () => {
-        if (conversationId) {
-            await pingBoostSession(conversationId).catch((error) => {
-                console.error(error);
-            });
-        }
-    }, [conversationId]);
 
     const start = useCallback(async () => {
         const finishLoading = setIsLoading();
@@ -528,10 +536,10 @@ const SessionProvider = (properties: Record<string, unknown>) => {
                     throw error;
                 });
 
-                void updateSession(session);
+                update(session);
             } else {
                 const session = await createBoostSession();
-                void updateSession(session);
+                update(session);
             }
 
             setStatus('connected');
@@ -540,61 +548,44 @@ const SessionProvider = (properties: Record<string, unknown>) => {
         }
 
         finishLoading();
-    }, [
-        savedConversationId,
-        language,
-        setIsLoading,
-        updateSession,
-        handleError
-    ]);
+    }, [savedConversationId, language, setIsLoading, update, handleError]);
 
-    const restart = useCallback(async () => {
-        const finishLoading = setIsLoading();
-        setStatus('restarting');
+    const remove = useCallback(async () => {
+        setSavedConversationId(undefined);
+        setConversation(undefined);
+        setResponses(undefined);
+        setQueue(undefined);
 
         if (conversationId && canDeleteConversation) {
             await deleteBoostSession(conversationId).catch((error) => {
                 console.error(error);
             });
         }
+    }, [conversationId, canDeleteConversation]);
 
-        setSavedConversationId(undefined);
-        setConversation(undefined);
-        setResponses(undefined);
-        setQueue(undefined);
+    const restart = useCallback(async () => {
+        const finishLoading = setIsLoading();
+        setStatus('restarting');
+        await remove();
+        setStatus('connecting');
 
         try {
             const createdSession = await createBoostSession();
-            void updateSession(createdSession);
+            update(createdSession);
+            setStatus('connected');
         } catch (error) {
             handleError(error);
         }
 
         finishLoading();
-    }, [
-        conversationId,
-        canDeleteConversation,
-        setIsLoading,
-        updateSession,
-        handleError
-    ]);
+    }, [remove, setIsLoading, update, handleError]);
 
     const finish = useCallback(async () => {
         const finishLoading = setIsLoading();
         setStatus('ended');
-
-        if (conversationId && canDeleteConversation) {
-            await deleteBoostSession(conversationId).catch((error) => {
-                console.error(error);
-            });
-        }
-
-        setSavedConversationId(undefined);
-        setConversation(undefined);
-        setResponses(undefined);
-        setQueue(undefined);
+        await remove();
         finishLoading();
-    }, [conversationId, canDeleteConversation, setIsLoading]);
+    }, [remove, setIsLoading]);
 
     useEffect(() => {
         if (conversationId) {
@@ -620,7 +611,7 @@ const SessionProvider = (properties: Record<string, unknown>) => {
                         }
 
                         if (shouldUpdate) {
-                            void updateSession(updatedSession);
+                            update(updatedSession);
                         }
                     })
                     .catch((error) => {
@@ -644,7 +635,7 @@ const SessionProvider = (properties: Record<string, unknown>) => {
         }
 
         return undefined;
-    }, [status, conversationId, responses, updateSession, handleError]);
+    }, [status, conversationId, responses, update, handleError]);
 
     useEffect(() => {
         if (conversationId) {
@@ -881,7 +872,8 @@ const ResponseElement = ({
             <div>
                 {element.payload.links.map((link, index) => (
                     <ResponseElementLink
-                        key={index} // eslint-disable-line react/no-array-index-key
+                        // eslint-disable-next-line react/no-array-index-key
+                        key={index}
                         {...properties}
                         {...{link}}
                     />
@@ -962,7 +954,8 @@ const Response = ({
 
                         return (
                             <Obscured
-                                key={index} // eslint-disable-line react/no-array-index-key
+                                // eslint-disable-next-line react/no-array-index-key
+                                key={index}
                                 untilTimestamp={elementTypingRevealTimestamp}
                             >
                                 <Obscured
@@ -1056,7 +1049,6 @@ const Container = styled.div`
 `;
 
 const Padding = styled.div`
-    height: 100%;
     padding: 30px;
     box-sizing: border-box;
 `;
@@ -1091,11 +1083,14 @@ const Stripe = styled.div`
 `;
 
 const StatusStripeContainer = styled.div`
-    margin-top: 40px;
     position: sticky;
     bottom: 30px;
 
-    ${Stripe}:empty + & {
+    ${Stripe} {
+        margin-top: 40px;
+    }
+
+    ${Stripe}:empty + & ${Stripe} {
         margin-top: 0;
     }
 `;
@@ -1283,6 +1278,12 @@ const Chat = () => {
                 <Container>
                     <Header>
                         <Padding>
+                            {conversationStatus === 'assigned_to_human' ? (
+                                <h1>Chat med NAV</h1>
+                            ) : (
+                                <h1>Chatbot Frida</h1>
+                            )}
+
                             <button
                                 aria-label='Minimer chatvindu'
                                 type='button'
@@ -1341,32 +1342,37 @@ const Chat = () => {
                     </Conversation>
 
                     <Form onSubmit={handleSubmit}>
-                        <Textarea
-                            aria-label='Ditt spørsmål'
-                            placeholder='Skriv spørsmålet ditt'
-                            name='message'
-                            value={message}
-                            maxLength={messageMaxCharacters}
-                            onChange={handleChange}
-                            onKeyDown={handleKeyDown}
-                        />
+                        <Padding>
+                            <Textarea
+                                aria-label='Ditt spørsmål'
+                                placeholder='Skriv spørsmålet ditt'
+                                name='message'
+                                value={message}
+                                maxLength={messageMaxCharacters}
+                                onChange={handleChange}
+                                onKeyDown={handleKeyDown}
+                            />
 
-                        <Actions>
-                            <Knapp aria-label='Send melding' htmlType='submit'>
-                                Send
-                            </Knapp>
-
-                            {conversationStatus === 'virtual_agent' && (
-                                <RestartKnapp
-                                    aria-label='Start chat på nytt'
-                                    htmlType='button'
-                                    type='flat'
-                                    onClick={handleRestart}
+                            <Actions>
+                                <Knapp
+                                    aria-label='Send melding'
+                                    htmlType='submit'
                                 >
-                                    Start på nytt
-                                </RestartKnapp>
-                            )}
-                        </Actions>
+                                    Send
+                                </Knapp>
+
+                                {conversationStatus === 'virtual_agent' && (
+                                    <RestartKnapp
+                                        aria-label='Start chat på nytt'
+                                        htmlType='button'
+                                        type='flat'
+                                        onClick={handleRestart}
+                                    >
+                                        Start på nytt
+                                    </RestartKnapp>
+                                )}
+                            </Actions>
+                        </Padding>
                     </Form>
                 </Container>
             )}

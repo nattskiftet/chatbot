@@ -19,9 +19,10 @@
         "start": "nwb -c ./nwb.demo.config.js serve-react-demo --copy-files",
         "start:host": "nwb -c ./nwb.demo.config.js serve-react-demo --copy-files --host 0.0.0.0",
         "generate:types": "dts-generator --out src/index.d.ts --project ./ --exclude ./src/components/**/styles.ts --exclude ./node_modules/**/*.d.ts --prefix",
-        "test": "xo && nwb test-react",
+        "test": "nwb test-react",
         "test:coverage": "nwb test-react --coverage",
-        "test:watch": "nwb test-react --server"
+        "test:watch": "nwb test-react --server",
+        "lint": "xo"
     },
     "dependencies": {
         "axios": "^0.21.0",
