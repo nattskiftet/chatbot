@@ -1,14 +1,34 @@
 import 'react-app-polyfill/ie11';
 import 'react-app-polyfill/stable';
 
-import React, {createContext, useContext, useState, useEffect} from 'react';
+import React, {
+    useRef,
+    createContext,
+    useContext,
+    useState,
+    useMemo,
+    useEffect,
+    useCallback
+} from 'react';
 
-import axios, {AxiosError} from 'axios';
+import styled from 'styled-components';
+import axios from 'axios';
 import cookies from 'js-cookie';
+
+import {Textarea} from 'nav-frontend-skjema';
+import {Knapp} from 'nav-frontend-knapper';
+import Snakkeboble from 'nav-frontend-snakkeboble';
+import AlertStripe from 'nav-frontend-alertstriper';
+
+const cookieDomain =
+    window.location.hostname === 'localhost' ? undefined : '.nav.no';
 
 const apiUrlBase = 'https://navtest.boost.ai/api/chat/v2';
 const conversationIdCookieName = 'nav-chatbot:conversation';
 const languageCookieName = 'nav-chatbot:language';
+const openCookieName = 'nav-chatbot:open';
+const unreadCookieName = 'nav-chatbot:unread';
+const linkDisableTimeout = 1000 * 10;
 const botResponseRevealDelay = 2000;
 const botResponseRevealDelayBuffer = botResponseRevealDelay / 2;
 
@@ -17,7 +37,9 @@ interface BoostConversation {
     reference: string;
     state: {
         chat_status: string;
-        max_input_characters: number;
+        allow_delete_conversation: boolean;
+        human_is_typing: boolean;
+        max_input_chars: number;
     };
 }
 
@@ -39,6 +61,7 @@ interface BoostResponseElementLinksItem {
     id: string;
     text: string;
     type: string;
+    url?: string;
 }
 
 interface BoostResponseElementLinks {
@@ -196,27 +219,29 @@ type BoostRequestResponse =
 
 function useLoader() {
     const [loaders, setLoaders] = useState<number[]>([]);
-    let iteration = 0;
+    const isLoading = useMemo<boolean>(() => loaders.length !== 0, [
+        loaders.length
+    ]);
 
-    function createLoader() {
-        iteration += 1;
+    const iteration = useRef<number>(0);
+    const createLoader = useCallback(() => {
+        iteration.current += 1;
+        const currentIteration = iteration.current;
 
-        const currentIteration = iteration;
         setLoaders((previousState) => previousState.concat(currentIteration));
 
         return () => {
-            setLoaders((previousState) => {
+            return setLoaders((previousState) => {
                 previousState.splice(
                     previousState.indexOf(currentIteration),
                     1
                 );
 
-                return previousState;
+                return previousState.slice();
             });
         };
-    }
+    }, [iteration]);
 
-    const isLoading: boolean = loaders.length !== 0;
     return [isLoading, createLoader] as const;
 }
 
@@ -251,7 +276,7 @@ const LanguageProvider = (properties: Record<string, unknown>) => {
 
     useEffect(() => {
         if (language) {
-            cookies.set(languageCookieName, language);
+            cookies.set(languageCookieName, language, {domain: cookieDomain});
         }
     }, [language]);
 
@@ -265,43 +290,50 @@ const LanguageProvider = (properties: Record<string, unknown>) => {
 
 const useLanguage = () => useContext(LanguageContext);
 
+interface SessionError extends Error {
+    code?: string;
+}
+
 interface Session {
     id?: string;
     status?:
-        | 'initializing'
+        | 'disconnected'
+        | 'connecting'
         | 'connected'
-        | 'loading'
         | 'restarting'
         | 'error'
         | 'ended';
+    error?: SessionError;
     queue?: BoostResponse;
     session?: {
         conversation: BoostConversation;
         responses: BoostResponse[];
     };
-    isInitializing?: boolean;
     isLoading?: boolean;
+    start?: () => Promise<void>;
+    restart?: () => Promise<void>;
+    finish?: () => Promise<void>;
     sendMessage?: (message: string) => Promise<void>;
     sendAction?: (actionId: string) => Promise<void>;
     sendPing?: () => Promise<void>;
-    restart?: () => Promise<void>;
 }
 
 const SessionContext = createContext<Session>({});
 
 const SessionProvider = (properties: Record<string, unknown>) => {
-    const [status, setStatus] = useState<Session['status']>('initializing');
+    const [status, setStatus] = useState<Session['status']>('disconnected');
+    const [error, setError] = useState<SessionError>();
     const [isLoading, setIsLoading] = useLoader();
     const {language, setLanguage} = useLanguage();
-    const [savedConversationId] = useState<string | undefined>(() =>
-        cookies.get(conversationIdCookieName)
-    );
+    const [savedConversationId, setSavedConversationId] = useState<
+        string | undefined
+    >(() => cookies.get(conversationIdCookieName));
 
     const [queue, setQueue] = useState<BoostResponse>();
     const [session, setSession] = useState<Session['session'] | undefined>();
     const conversationId = session?.conversation.id;
 
-    function handleError(error: any) {
+    const handleError = useCallback((error: any) => {
         if (error?.response) {
             if (error.response.data.error === 'session ended') {
                 setStatus('ended');
@@ -309,224 +341,250 @@ const SessionProvider = (properties: Record<string, unknown>) => {
             }
         }
 
-        setStatus('error');
-    }
-
-    async function updateSession(updates: BoostRequestResponse) {
-        const responses =
-            'response' in updates ? [updates.response] : updates.responses;
-        const [mostRecentResponse] = responses.slice(-1);
-
-        if (mostRecentResponse.language) {
-            setLanguage!(mostRecentResponse.language);
+        if (error.message.toLowerCase() === 'network error') {
+            const error: SessionError = new Error('Network error');
+            error.code = 'network_error';
+            setError(error);
         }
 
-        setQueue((previousQueue) => {
-            if (previousQueue) {
-                const messages: string[] = [];
+        setStatus('error');
+    }, []);
 
-                responses.forEach((response) => {
-                    response.elements.forEach((element) => {
-                        if (element.type === 'text') {
-                            messages.push(element.payload.text);
-                        }
-                    });
-                });
+    const updateSession = useCallback(
+        async (updates: BoostRequestResponse) => {
+            const responses =
+                'response' in updates ? [updates.response] : updates.responses;
+            const [mostRecentResponse] = responses.slice(-1);
 
-                const updatedElements = previousQueue.elements.filter(
-                    (element) =>
-                        element.type === 'text' &&
-                        !messages.includes(element.payload.text)
-                );
-
-                if (updatedElements.length === 0) {
-                    return undefined;
-                }
-
-                return {
-                    ...previousQueue,
-                    elements: updatedElements
-                };
+            if (mostRecentResponse.language) {
+                setLanguage!(mostRecentResponse.language);
             }
-
-            return previousQueue;
-        });
-
-        setSession((previousSession) => {
-            if (previousSession) {
-                const updatedResponses = previousSession.responses;
-                const currentResponseIds = new Set(
-                    updatedResponses.map((index) => String(index.id))
-                );
-
-                responses.forEach((response) => {
-                    if (!currentResponseIds.has(String(response.id))) {
-                        updatedResponses.push(response);
-                    }
-                });
-
-                updatedResponses.sort(
-                    (a, b) =>
-                        new Date(a.date_created).getTime() -
-                        new Date(b.date_created).getTime()
-                );
-
-                return {
-                    conversation: updates.conversation,
-                    responses: updatedResponses
-                };
-            }
-
-            if ('response' in updates) {
-                return {
-                    conversation: updates.conversation,
-                    responses: [
-                        {
-                            ...updates.response,
-                            // NOTE: 'START' request returns wrong creation date (shifted one hour back)
-                            date_created: new Date().toISOString()
-                        }
-                    ]
-                };
-            }
-
-            return updates;
-        });
-    }
-
-    async function sendMessage(message: string) {
-        if (session && conversationId) {
-            const finishLoading = setIsLoading();
 
             setQueue((previousQueue) => {
-                if (!previousQueue) {
-                    previousQueue = {
-                        id: 'local',
-                        source: 'local',
-                        date_created: new Date().toISOString(),
-                        elements: []
+                if (previousQueue) {
+                    const messages: string[] = [];
+
+                    responses.forEach((response) => {
+                        response.elements.forEach((element) => {
+                            if (element.type === 'text') {
+                                messages.push(element.payload.text);
+                            }
+                        });
+                    });
+
+                    const updatedElements = previousQueue.elements.filter(
+                        (element) =>
+                            element.type === 'text' &&
+                            !messages.includes(element.payload.text)
+                    );
+
+                    if (updatedElements.length === 0) {
+                        return undefined;
+                    }
+
+                    return {
+                        ...previousQueue,
+                        elements: updatedElements
                     };
                 }
 
-                return {
-                    ...previousQueue,
-                    elements: previousQueue.elements.concat({
-                        type: 'text',
-                        payload: {text: message}
-                    })
-                };
+                return previousQueue;
             });
 
-            await postBoostSession(conversationId, {
-                type: 'text',
-                message
-            }).catch((error) => {
-                void handleError(error);
+            setSession((previousSession) => {
+                if (previousSession) {
+                    const updatedResponses = previousSession.responses;
+                    const currentResponseIds = new Set(
+                        updatedResponses.map((index) => String(index.id))
+                    );
+
+                    responses.forEach((response) => {
+                        if (!currentResponseIds.has(String(response.id))) {
+                            updatedResponses.push(response);
+                        }
+                    });
+
+                    updatedResponses.sort(
+                        (a, b) =>
+                            new Date(a.date_created).getTime() -
+                            new Date(b.date_created).getTime()
+                    );
+
+                    return {
+                        conversation: updates.conversation,
+                        responses: updatedResponses
+                    };
+                }
+
+                if ('response' in updates) {
+                    return {
+                        conversation: updates.conversation,
+                        responses: [
+                            {
+                                ...updates.response,
+                                // NOTE: 'START' request returns wrong creation date (shifted one hour back)
+                                date_created: new Date().toISOString()
+                            }
+                        ]
+                    };
+                }
+
+                return updates;
             });
+        },
+        [setLanguage]
+    );
 
-            finishLoading();
-        }
-    }
+    const sendMessage = useCallback(
+        async (message: string) => {
+            if (session && conversationId) {
+                const finishLoading = setIsLoading();
 
-    async function sendAction(id: string) {
-        if (session && conversationId) {
-            const finishLoading = setIsLoading();
-            await postBoostSession(conversationId, {
-                type: 'action_link',
-                id
-            }).catch((error) => {
-                void handleError(error);
-            });
+                setQueue((previousQueue) => {
+                    if (!previousQueue) {
+                        previousQueue = {
+                            id: 'local',
+                            source: 'local',
+                            date_created: new Date().toISOString(),
+                            elements: []
+                        };
+                    }
 
-            finishLoading();
-        }
-    }
+                    return {
+                        ...previousQueue,
+                        elements: previousQueue.elements.concat({
+                            type: 'text',
+                            payload: {text: message}
+                        })
+                    };
+                });
 
-    async function sendPing() {
+                await postBoostSession(conversationId, {
+                    type: 'text',
+                    message
+                }).catch((error) => {
+                    void handleError(error);
+                });
+
+                finishLoading();
+            }
+        },
+        [session, conversationId, setIsLoading, handleError]
+    );
+
+    const sendAction = useCallback(
+        async (id: string) => {
+            if (session && conversationId) {
+                const finishLoading = setIsLoading();
+
+                await postBoostSession(conversationId, {
+                    type: 'action_link',
+                    id
+                }).catch((error) => {
+                    void handleError(error);
+                });
+
+                finishLoading();
+            }
+        },
+        [session, conversationId, setIsLoading, handleError]
+    );
+
+    const sendPing = useCallback(async () => {
         if (session && conversationId) {
             await pingBoostSession(conversationId).catch((error) => {
                 console.error(error);
             });
         }
-    }
+    }, [session, conversationId]);
 
-    async function restart() {
+    const start = useCallback(async () => {
+        const finishLoading = setIsLoading();
+        setStatus('connecting');
+
+        try {
+            if (savedConversationId) {
+                const session = await getBoostSession(savedConversationId, {
+                    language
+                }).catch(async (error) => {
+                    if (error?.response) {
+                        if (error.response.data.error === 'session ended') {
+                            return createBoostSession();
+                        }
+                    }
+
+                    throw error;
+                });
+
+                void updateSession(session);
+            } else {
+                const session = await createBoostSession();
+                void updateSession(session);
+            }
+
+            setStatus('connected');
+        } catch (error) {
+            void handleError(error);
+        }
+
+        finishLoading();
+    }, [
+        savedConversationId,
+        language,
+        setIsLoading,
+        updateSession,
+        handleError
+    ]);
+
+    const restart = useCallback(async () => {
+        const finishLoading = setIsLoading();
         setStatus('restarting');
 
         if (session && conversationId) {
-            await deleteBoostSession(conversationId).catch((error) => {
-                console.error(error);
-            });
+            const isDeletionAllowed =
+                session.conversation.state.allow_delete_conversation;
+
+            if (isDeletionAllowed) {
+                await deleteBoostSession(conversationId).catch((error) => {
+                    console.error(error);
+                });
+            }
         }
 
-        const finishLoading = setIsLoading();
+        setSavedConversationId(undefined);
         setSession(undefined);
         setQueue(undefined);
 
         try {
             const createdSession = await createBoostSession();
-
-            cookies.set(
-                conversationIdCookieName,
-                createdSession.conversation.id
-            );
-
             void updateSession(createdSession);
         } catch (error) {
             handleError(error);
         }
 
         finishLoading();
-    }
+    }, [session, conversationId, setIsLoading, updateSession, handleError]);
 
-    useEffect(() => {
-        let shouldUpdate = true;
+    const finish = useCallback(async () => {
         const finishLoading = setIsLoading();
+        setStatus('ended');
 
-        if (savedConversationId) {
-            void getBoostSession(savedConversationId, {language})
-                .then((retrievedSession) => {
-                    if (shouldUpdate) {
-                        void updateSession(retrievedSession);
-                    }
+        if (session && conversationId) {
+            const isDeletionAllowed =
+                session.conversation.state.allow_delete_conversation;
 
-                    finishLoading();
-                })
-                .catch((error) => {
-                    if (shouldUpdate) {
-                        void handleError(error);
-                    }
-
-                    finishLoading();
+            if (isDeletionAllowed) {
+                await deleteBoostSession(conversationId).catch((error) => {
+                    console.error(error);
                 });
-        } else {
-            void createBoostSession()
-                .then((createdSession) => {
-                    if (shouldUpdate) {
-                        cookies.set(
-                            conversationIdCookieName,
-                            createdSession.conversation.id
-                        );
-
-                        void updateSession(createdSession);
-                    }
-
-                    finishLoading();
-                })
-                .catch((error) => {
-                    if (shouldUpdate) {
-                        void handleError(error);
-                    }
-
-                    finishLoading();
-                });
+            }
         }
 
-        return () => {
-            shouldUpdate = false;
-            finishLoading();
-        };
-    }, [savedConversationId]);
+        setSavedConversationId(undefined);
+        setSession(undefined);
+        setQueue(undefined);
+        finishLoading();
+    }, [session, conversationId, setIsLoading]);
 
     useEffect(() => {
         if (session && conversationId) {
@@ -534,6 +592,10 @@ const SessionProvider = (properties: Record<string, unknown>) => {
             let shouldUpdate = true;
 
             const poll = async () => {
+                if (!session || !conversationId || !shouldUpdate) {
+                    return;
+                }
+
                 const [mostRecentResponse] = session.responses.slice(-1);
                 const mostRecentResponseId = mostRecentResponse.id;
 
@@ -541,6 +603,12 @@ const SessionProvider = (properties: Record<string, unknown>) => {
                     mostRecentResponseId
                 })
                     .then((updatedSession) => {
+                        if (status !== 'disconnected' && status !== 'ended') {
+                            if (shouldUpdate) {
+                                setStatus('connected');
+                            }
+                        }
+
                         if (updatedSession.responses.length === 0) {
                             return;
                         }
@@ -570,21 +638,16 @@ const SessionProvider = (properties: Record<string, unknown>) => {
         }
 
         return undefined;
-    }, [session]);
-
-    const isInitializing = isLoading && !session;
+    }, [status, session, conversationId, updateSession, handleError]);
 
     useEffect(() => {
-        if (isLoading) {
-            if (session) {
-                setStatus('loading');
-            } else {
-                setStatus('initializing');
-            }
-        } else if (session) {
-            setStatus('connected');
+        if (conversationId) {
+            setSavedConversationId(conversationId);
+            cookies.set(conversationIdCookieName, conversationId, {
+                domain: cookieDomain
+            });
         }
-    }, [session, isLoading]);
+    }, [conversationId]);
 
     return (
         <SessionContext.Provider
@@ -592,14 +655,16 @@ const SessionProvider = (properties: Record<string, unknown>) => {
             value={{
                 id: conversationId,
                 status,
+                error,
                 queue,
                 session,
-                isInitializing,
                 isLoading,
                 sendMessage,
                 sendAction,
                 sendPing,
-                restart
+                start,
+                restart,
+                finish
             }}
         />
     );
@@ -607,13 +672,48 @@ const SessionProvider = (properties: Record<string, unknown>) => {
 
 const useSession = () => useContext(SessionContext);
 
+const TypingIndicator = () => {
+    const [iteration, setIteration] = useState(0);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setIteration((number) => number + 1);
+        }, 275);
+
+        return () => {
+            clearInterval(interval);
+        };
+    }, []);
+
+    switch (iteration % 3) {
+        default:
+        case 0: {
+            return <>&nbsp;.&nbsp;</>;
+        }
+
+        case 1: {
+            return <>&nbsp;&nbsp;.</>;
+        }
+
+        case 2: {
+            return <>.&nbsp;&nbsp;</>;
+        }
+    }
+};
+
 interface ObscuredProperties {
     untilTimestamp?: number;
     by?: React.ReactNode;
     children: React.ReactNode;
+    onReveal?: () => void;
 }
 
-const Obscured = ({untilTimestamp, by, children}: ObscuredProperties) => {
+const Obscured = ({
+    untilTimestamp,
+    by,
+    children,
+    onReveal
+}: ObscuredProperties) => {
     const [isVisible, setIsVisible] = useState(() => {
         const currentTimestamp = Date.now();
 
@@ -639,7 +739,13 @@ const Obscured = ({untilTimestamp, by, children}: ObscuredProperties) => {
 
         setIsVisible(true);
         return undefined;
-    }, []);
+    }, [untilTimestamp]);
+
+    useEffect(() => {
+        if (isVisible && onReveal) {
+            onReveal();
+        }
+    }, [isVisible, onReveal]);
 
     if (isVisible) {
         // eslint-disable-next-line react/jsx-no-useless-fragment
@@ -664,22 +770,25 @@ const ResponseElementLink = ({
     onAction
 }: ResponseElementLinkProperties) => {
     const [isSelected, setIsSelected] = useState(false);
+    const [isDisabled, setIsDisabled] = useState(false);
     const [isLoading, setIsLoading] = useLoader();
 
-    async function handleAction() {
+    const handleAction = useCallback(async () => {
         if (!isLoading && onAction) {
             const finishLoading = setIsLoading();
             await onAction(link.id);
             finishLoading();
+
             setIsSelected(true);
+            setIsDisabled(true);
         }
-    }
+    }, [link.id, isLoading, onAction, setIsLoading]);
 
     useEffect(() => {
-        if (isSelected) {
+        if (isDisabled) {
             const timeout = setTimeout(() => {
-                setIsSelected(false);
-            }, 5000);
+                setIsDisabled(false);
+            }, linkDisableTimeout);
 
             return () => {
                 clearTimeout(timeout);
@@ -687,18 +796,29 @@ const ResponseElementLink = ({
         }
 
         return undefined;
-    }, [isSelected]);
+    }, [isDisabled]);
+
+    if (link.url && link.type === 'external_link') {
+        return <a href={link.url}>{link.text}</a>;
+    }
 
     return (
         <button
             type='submit'
-            disabled={isLoading || isSelected}
+            disabled={isLoading || isDisabled}
             onClick={handleAction}
         >
             {isSelected && 'Yes: '} {link.text} {isLoading && '(loading...)'}
         </button>
     );
 };
+
+const SnakkebobleContents = styled.div`
+    p {
+        margin: 0;
+        padding: 0;
+    }
+`;
 
 interface ResponseElementProperties
     extends Omit<ResponseElementLinkProperties, 'link'> {
@@ -719,26 +839,33 @@ const ResponseElement = ({
         if (response.source === 'local') {
             return (
                 <div style={{opacity: 0.5}}>
-                    {element.payload.text} (sender)
+                    <Snakkeboble pilHoyre topp='Sender...'>
+                        {element.payload.text}
+                    </Snakkeboble>
                 </div>
             );
         }
 
         if (response.source === 'client') {
-            return <div>{element.payload.text} (sendt)</div>;
+            return (
+                <Snakkeboble pilHoyre topp='Sendt'>
+                    {element.payload.text}
+                </Snakkeboble>
+            );
         }
 
-        return <div>{element.payload.text}</div>;
+        return <Snakkeboble>{element.payload.text}</Snakkeboble>;
     }
 
     if (element.type === 'html') {
         return (
-            <div
-                // eslint-disable-next-line react/no-danger
-                dangerouslySetInnerHTML={{
-                    __html: String(element.payload.html)
-                }}
-            />
+            <Snakkeboble>
+                <SnakkebobleContents
+                    dangerouslySetInnerHTML={{
+                        __html: String(element.payload.html)
+                    }}
+                />
+            </Snakkeboble>
         );
     }
 
@@ -762,12 +889,14 @@ const ResponseElement = ({
 interface ResponseProperties
     extends Omit<ResponseElementProperties, 'element'> {
     responsesLength?: number;
+    onReveal?: () => void;
 }
 
 const Response = ({
     response,
     responseIndex,
     responsesLength,
+    onReveal,
     ...properties
 }: ResponseProperties) => {
     const responseDate = new Date(response.date_created);
@@ -790,18 +919,20 @@ const Response = ({
             botResponseRevealDelayBuffer * Math.random();
     }
 
+    const handleReveal = useCallback(() => {
+        if (onReveal) {
+            onReveal();
+        }
+    }, [onReveal]);
+
     return (
         <Obscured untilTimestamp={typingRevealTimestamp}>
-            <li lang={response.language}>
-                <Obscured untilTimestamp={revealTimestamp} by='(typing...)'>
-                    {response.avatar_url && (
-                        <img width={16} height={16} src={response.avatar_url} />
-                    )}
-
-                    <time dateTime={response.date_created}>
-                        {response.date_created}
-                    </time>
-
+            <div lang={response.language}>
+                <Obscured
+                    untilTimestamp={revealTimestamp}
+                    by={<TypingIndicator />}
+                    onReveal={handleReveal}
+                >
                     {response.elements.map((element, index) => {
                         let elementTypingRevealTimestamp = 0;
                         let elementRevealTimestamp = 0;
@@ -814,7 +945,7 @@ const Response = ({
 
                                 elementRevealTimestamp =
                                     element.type === 'links'
-                                        ? elementTypingRevealTimestamp
+                                        ? 0
                                         : elementTypingRevealTimestamp +
                                           botResponseRevealDelayBuffer +
                                           botResponseRevealDelayBuffer *
@@ -829,7 +960,8 @@ const Response = ({
                             >
                                 <Obscured
                                     untilTimestamp={elementRevealTimestamp}
-                                    by='(typing...)'
+                                    by={<TypingIndicator />}
+                                    onReveal={handleReveal}
                                 >
                                     <ResponseElement
                                         {...properties}
@@ -840,53 +972,282 @@ const Response = ({
                         );
                     })}
                 </Obscured>
-            </li>
+            </div>
         </Obscured>
     );
 };
 
+const IntroStripe = () => {
+    const {status} = useSession();
+
+    if (status === 'connecting') {
+        return <AlertStripe type='info'>Kobler til...</AlertStripe>;
+    }
+
+    if (status === 'connected') {
+        return <AlertStripe type='info'>Tilkoblet.</AlertStripe>;
+    }
+
+    return null;
+};
+
+const StatusStripe = () => {
+    const {session, error, status} = useSession();
+    const conversationStatus = session?.conversation.state.chat_status;
+
+    switch (status) {
+        case 'restarting': {
+            return (
+                <AlertStripe type='advarsel'>Starter på nytt...</AlertStripe>
+            );
+        }
+
+        case 'ended': {
+            return (
+                <AlertStripe type='suksess'>Samtalen er avsluttet.</AlertStripe>
+            );
+        }
+
+        case 'error': {
+            if (error?.code === 'network_error') {
+                return (
+                    <AlertStripe type='feil'>
+                        Vi får ikke kontakt. Vennligst sjekk
+                        internettilkoblingen din og prøv igjen.
+                    </AlertStripe>
+                );
+            }
+
+            return (
+                <AlertStripe type='feil'>Det har skjedd en feil.</AlertStripe>
+            );
+        }
+
+        default: {
+            if (conversationStatus === 'in_human_chat_queue') {
+                return (
+                    <AlertStripe type='info'>
+                        Venter på ledig kundebehandler...
+                    </AlertStripe>
+                );
+            }
+
+            return null;
+        }
+    }
+};
+
+const Container = styled.div`
+    height: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-flow: column;
+    position: fixed;
+    right: 0;
+    bottom: 0;
+`;
+
+const Padding = styled.div`
+    height: 100%;
+    padding: 30px;
+    box-sizing: border-box;
+`;
+
+const Header = styled.div`
+    background: #eee;
+    border-bottom: 1px solid #999;
+`;
+
+const Conversation = styled.div`
+    overflow: auto;
+    scroll-snap-type: y proximity;
+    flex: 1;
+    position: relative;
+`;
+
+const Stripe = styled.div`
+    margin-top: 30px;
+    margin-bottom: 30px;
+
+    &:first-child {
+        margin-top: 0;
+    }
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+
+    &:empty {
+        display: none;
+    }
+`;
+
+const StatusStripeContainer = styled.div`
+    margin-top: 40px;
+    position: sticky;
+    bottom: 30px;
+
+    ${Stripe}:empty + & {
+        margin-top: 0;
+    }
+`;
+
+const Anchor = styled.div`
+    overflow-anchor: auto;
+    scroll-snap-align: start;
+`;
+
+const Form = styled.form`
+    border-top: 1px solid #999;
+`;
+
+const Actions = styled.div`
+    margin-top: 10px;
+    display: flex;
+    flex-direction: row-reverse;
+`;
+
+const Separator = styled.div`
+    flex: 1;
+`;
+
+const RestartKnapp = styled(Knapp)`
+    padding: 0 15px;
+    margin-right: 10px;
+`;
+
 const Chat = () => {
     const {
         id,
+        isLoading,
         status,
         session,
         queue,
+        start,
+        restart,
+        finish,
         sendMessage,
         sendAction,
-        sendPing,
-        restart
-    } = useSession();
+        sendPing
+    } = useContext(SessionContext);
 
-    const {language} = useLanguage();
-    const [message, setMessage] = useState('');
+    const anchor = useRef<HTMLDivElement>();
+    const [message, setMessage] = useState<string>('');
+    const [isOpen, setIsOpen] = useState<boolean>(
+        () => cookies.get(openCookieName) === 'true'
+    );
 
-    function handleChange(event: React.ChangeEvent<HTMLTextAreaElement>) {
-        setMessage(event.target.value);
-    }
+    const [unreadCount, setUnreadCount] = useState<number>(
+        () => Number.parseInt(String(cookies.get(unreadCookieName)), 10) || 0
+    );
 
-    async function handleAction(id: string) {
-        await sendAction!(id);
-    }
+    const responsesLength = session?.responses.length;
+    const conversationStatus = session?.conversation.state.chat_status;
+    const messageMaxCharacters =
+        session?.conversation.state.max_input_chars ?? 110;
+    const isAgentTyping = session?.conversation.state.human_is_typing;
 
-    function handleSubmit(event?: React.FormEvent<HTMLFormElement>) {
-        event?.preventDefault();
-
-        if (message) {
-            setMessage('');
-            void sendMessage!(message);
+    const scrollToBottom = useCallback(() => {
+        if (anchor.current) {
+            anchor.current.scrollIntoView({block: 'start'});
         }
-    }
+    }, []);
 
-    function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
-        if (event.key.toLowerCase() === 'enter' && !event.shiftKey) {
-            event.preventDefault();
-            handleSubmit();
+    const handleChange = useCallback(
+        (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+            setMessage(event.target.value);
+        },
+        []
+    );
+
+    const handleAction = useCallback(
+        async (id: string) => {
+            await sendAction!(id);
+        },
+        [sendAction]
+    );
+
+    const handleSubmit = useCallback(
+        (event?: React.FormEvent<HTMLFormElement>) => {
+            event?.preventDefault();
+
+            if (message) {
+                if (message.length < messageMaxCharacters) {
+                    setMessage('');
+                    void sendMessage!(message);
+                }
+            }
+        },
+        [message, messageMaxCharacters, sendMessage]
+    );
+
+    const handleKeyDown = useCallback(
+        (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+            if (event.key.toLowerCase() === 'enter' && !event.shiftKey) {
+                event.preventDefault();
+                handleSubmit();
+            }
+        },
+        [handleSubmit]
+    );
+
+    const handleOpen = useCallback(() => {
+        setIsOpen(true);
+        setUnreadCount(0);
+        scrollToBottom();
+
+        if (status === 'disconnected' || status === 'ended') {
+            void start!();
         }
-    }
+    }, [status, start, scrollToBottom]);
 
-    function handleRestart() {
+    const handleClose = useCallback(() => {
+        setIsOpen(false);
+    }, []);
+
+    const handleRestart = useCallback(() => {
         void restart!();
-    }
+        setUnreadCount(0);
+    }, [restart]);
+
+    const handleFinish = useCallback(() => {
+        void finish!();
+        setIsOpen(false);
+        setUnreadCount(0);
+    }, [finish]);
+
+    useEffect(() => {
+        if (isOpen && (status === 'disconnected' || status === 'ended')) {
+            void start!();
+        }
+    }, [start, isOpen, status]);
+
+    useEffect(() => {
+        cookies.set(openCookieName, String(isOpen), {domain: cookieDomain});
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (
+            status === 'disconnected' ||
+            status === 'ended' ||
+            status === 'error'
+        ) {
+            setUnreadCount(0);
+        } else if (session && status === 'connected') {
+            setUnreadCount((number) => number + 1);
+        }
+    }, [status, session]);
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [scrollToBottom, status, queue]);
+
+    useEffect(() => {
+        cookies.set(unreadCookieName, String(unreadCount), {
+            domain: cookieDomain
+        });
+    }, [unreadCount]);
 
     useDebouncedEffect(
         2000,
@@ -898,56 +1259,110 @@ const Chat = () => {
         [message]
     );
 
-    const responsesLength = session?.responses.length;
-
     return (
-        <div>
-            <p>
-                {language
-                    ? language === 'en-GB'
-                        ? `Hello, ${language}`
-                        : `Hei, ${language}`
-                    : 'Hei!'}
-                .
-            </p>
-
-            <ul>
-                {status === 'initializing' && 'Kobler til...'}
-                {(status === 'connected' || status === 'loading') &&
-                    'Tilkoblet.'}
-                {status === 'restarting' && 'Starter på nytt...'}
-                {status === 'ended' && 'Samtalen er avsluttet.'}
-                {status === 'error' && 'Feil.'}
-
-                {session?.responses.map((response, index) => (
-                    <Response
-                        key={response.id}
-                        {...{response}}
-                        responseIndex={index}
-                        responsesLength={responsesLength}
-                        responses={session.responses}
-                        onAction={handleAction}
-                    />
-                ))}
-
-                {queue && <Response response={queue} />}
-            </ul>
-
-            <form onSubmit={handleSubmit}>
-                <textarea
-                    aria-label='Ditt spørsmål'
-                    placeholder='Skriv spørsmålet ditt'
-                    value={message}
-                    onChange={handleChange}
-                    onKeyDown={handleKeyDown}
-                />
-
-                <button type='submit'>Send</button>
-                <button type='button' onClick={handleRestart}>
-                    Restart
+        <>
+            {isOpen ? (
+                <button type='button' onClick={handleClose}>
+                    Lukk chat
                 </button>
-            </form>
-        </div>
+            ) : (
+                <button type='button' onClick={handleOpen}>
+                    Åpne chat{' '}
+                    {unreadCount > 0 && `(${unreadCount} ulest melding)`}
+                </button>
+            )}
+
+            {isOpen && (
+                <Container>
+                    <Header>
+                        <Padding>
+                            <button
+                                aria-label='Minimer chatvindu'
+                                type='button'
+                                onClick={handleClose}
+                            >
+                                Minimer
+                            </button>
+
+                            <button
+                                aria-label='Åpne chat i fullskjerm'
+                                type='button'
+                                onClick={handleClose}
+                            >
+                                Fullskjerm
+                            </button>
+
+                            <button
+                                aria-label='Avslutt chat'
+                                type='button'
+                                onClick={handleFinish}
+                            >
+                                Avslutt
+                            </button>
+                        </Padding>
+                    </Header>
+
+                    <Conversation>
+                        <Padding>
+                            <Stripe>
+                                <IntroStripe />
+                            </Stripe>
+
+                            {session?.responses.map((response, index) => (
+                                <Response
+                                    key={response.id}
+                                    {...{response}}
+                                    responseIndex={index}
+                                    responsesLength={responsesLength}
+                                    responses={session.responses}
+                                    onAction={handleAction}
+                                    onReveal={scrollToBottom}
+                                />
+                            ))}
+
+                            {queue && <Response response={queue} />}
+
+                            <StatusStripeContainer>
+                                <Stripe>
+                                    <StatusStripe />
+                                </Stripe>
+                            </StatusStripeContainer>
+
+                            <Anchor ref={anchor as any} />
+                        </Padding>
+                    </Conversation>
+
+                    <Form onSubmit={handleSubmit}>
+                        <Textarea
+                            aria-label='Ditt spørsmål'
+                            placeholder='Skriv spørsmålet ditt'
+                            name='message'
+                            value={message}
+                            maxLength={messageMaxCharacters}
+                            onChange={handleChange}
+                            onKeyDown={handleKeyDown}
+                        />
+
+                        <Actions>
+                            <Knapp aria-label='Send melding' htmlType='submit'>
+                                Send
+                            </Knapp>
+
+                            {conversationStatus === 'virtual_agent' && (
+                                <RestartKnapp
+                                    aria-label='Start chat på nytt'
+                                    htmlType='button'
+                                    type='flat'
+                                    onClick={handleRestart}
+                                >
+                                    Start på nytt
+                                </RestartKnapp>
+                            )}
+                        </Actions>
+                    </Form>
+                </Container>
+            )}
+        </>
     );
 };
 
