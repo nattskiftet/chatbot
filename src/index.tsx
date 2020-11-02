@@ -15,10 +15,16 @@ import styled from 'styled-components';
 import axios from 'axios';
 import cookies from 'js-cookie';
 
-import {Textarea} from 'nav-frontend-skjema';
+import {Innholdstittel, Normaltekst, Undertekst} from 'nav-frontend-typografi';
+import {Textarea, RadioPanelGruppe} from 'nav-frontend-skjema';
 import {Knapp} from 'nav-frontend-knapper';
-import Snakkeboble from 'nav-frontend-snakkeboble';
 import AlertStripe from 'nav-frontend-alertstriper';
+import NavFrontendSpinner from 'nav-frontend-spinner';
+
+import finishIcon from './assets/finish.svg';
+import minimizeIcon from './assets/minimize.svg';
+import fullscreenIcon from './assets/maximize.svg';
+import contractIcon from './assets/contract.svg';
 
 const cookieDomain =
     window.location.hostname === 'localhost' ? undefined : '.nav.no';
@@ -32,6 +38,7 @@ const unreadCookieName = 'nav-chatbot:unread';
 const linkDisableTimeout = 1000 * 10;
 const botResponseRevealDelay = 2000;
 const botResponseRevealDelayBuffer = botResponseRevealDelay / 2;
+const fullscreenMediaQuery = '(max-width: 500px)';
 
 interface BoostConversation {
     id: string;
@@ -765,11 +772,13 @@ const Obscured = ({
 
 interface ResponseElementLinkProperties {
     link: BoostResponseElementLinksItem;
+    response: BoostResponse;
     onAction?: Session['sendAction'];
 }
 
 const ResponseElementLink = ({
     link,
+    response,
     onAction
 }: ResponseElementLinkProperties) => {
     const [isSelected, setIsSelected] = useState(false);
@@ -787,6 +796,12 @@ const ResponseElementLink = ({
         }
     }, [link.id, isLoading, onAction, setIsLoading]);
 
+    const handleKeyPress = useCallback((event) => {
+        if (event.key.toLowerCase() === 'enter') {
+            void handleAction();
+        }
+    }, [handleAction]);
+
     useEffect(() => {
         if (isDisabled) {
             const timeout = setTimeout(() => {
@@ -802,26 +817,33 @@ const ResponseElementLink = ({
     }, [isDisabled]);
 
     if (link.url && link.type === 'external_link') {
-        return <a href={link.url}>{link.text}</a>;
+        return (
+            <ConversationBubbleContainer>
+                <ConversationBubbleAvatar>
+                    <img src={response.avatar_url} alt='' />
+                </ConversationBubbleAvatar>
+
+                <ConversationBubbleLeft>
+                    <ConversationBubbleText>
+                        <a href={link.url}>{link.text}</a>
+                    </ConversationBubbleText>
+                </ConversationBubbleLeft>
+            </ConversationBubbleContainer>
+        );
     }
 
     return (
-        <button
-            type='submit'
-            disabled={isLoading || isDisabled}
-            onClick={handleAction}
-        >
-            {isSelected && 'Yes: '} {link.text} {isLoading && '(loading...)'}
-        </button>
+        <ConversationBubbleContainer onKeyPress={handleKeyPress}>
+            <ConversationBubbleAvatar />
+            <ConversationButton
+                name={link.text}
+                radios={[{label: link.text, value: link.text, id: link.text}]}
+                checked={isSelected || isLoading ? link.text : undefined}
+                onChange={handleAction}
+            />
+        </ConversationBubbleContainer>
     );
 };
-
-const SnakkebobleContents = styled.div`
-    p {
-        margin: 0;
-        padding: 0;
-    }
-`;
 
 interface ResponseElementProperties
     extends Omit<ResponseElementLinkProperties, 'link'> {
@@ -841,49 +863,85 @@ const ResponseElement = ({
     if (element.type === 'text') {
         if (response.source === 'local') {
             return (
-                <div style={{opacity: 0.5}}>
-                    <Snakkeboble pilHoyre topp='Sender...'>
-                        {element.payload.text}
-                    </Snakkeboble>
+                <div style={{opacity: 0.7}}>
+                    <ConversationBubbleContainer>
+                        <ConversationBubbleRight tabIndex={0}>
+                            <ConversationBubbleText>
+                                {element.payload.text}
+                            </ConversationBubbleText>
+                        </ConversationBubbleRight>
+                    </ConversationBubbleContainer>
+
+                    <ConversationBubbleSubtext>
+                        Sender...
+                    </ConversationBubbleSubtext>
                 </div>
             );
         }
 
         if (response.source === 'client') {
             return (
-                <Snakkeboble pilHoyre topp='Sendt'>
-                    {element.payload.text}
-                </Snakkeboble>
+                <>
+                    <ConversationBubbleContainer>
+                        <ConversationBubbleRight tabIndex={0}>
+                            <ConversationBubbleText>
+                                {element.payload.text}
+                            </ConversationBubbleText>
+                        </ConversationBubbleRight>
+                    </ConversationBubbleContainer>
+
+                    <ConversationBubbleSubtext>Sendt</ConversationBubbleSubtext>
+                </>
             );
         }
 
-        return <Snakkeboble>{element.payload.text}</Snakkeboble>;
+        return (
+            <ConversationBubbleContainer>
+                <ConversationBubbleAvatar>
+                    <img src={response.avatar_url} alt='' />
+                </ConversationBubbleAvatar>
+
+                <ConversationBubbleLeft tabIndex={0}>
+                    <ConversationBubbleText>
+                        {element.payload.text}
+                    </ConversationBubbleText>
+                </ConversationBubbleLeft>
+            </ConversationBubbleContainer>
+        );
     }
 
     if (element.type === 'html') {
         return (
-            <Snakkeboble>
-                <SnakkebobleContents
-                    dangerouslySetInnerHTML={{
-                        __html: String(element.payload.html)
-                    }}
-                />
-            </Snakkeboble>
+            <ConversationBubbleContainer>
+                <ConversationBubbleAvatar>
+                    <img src={response.avatar_url} alt='' />
+                </ConversationBubbleAvatar>
+
+                <ConversationBubbleLeft tabIndex={0}>
+                    <ConversationBubbleText>
+                        <ConversationBubbleContents
+                            dangerouslySetInnerHTML={{
+                                __html: String(element.payload.html)
+                            }}
+                        />
+                    </ConversationBubbleText>
+                </ConversationBubbleLeft>
+            </ConversationBubbleContainer>
         );
     }
 
     if (element.type === 'links') {
         return (
-            <div>
+            <>
                 {element.payload.links.map((link, index) => (
                     <ResponseElementLink
                         // eslint-disable-next-line react/no-array-index-key
                         key={index}
                         {...properties}
-                        {...{link}}
+                        {...{response, link}}
                     />
                 ))}
-            </div>
+            </>
         );
     }
 
@@ -931,7 +989,7 @@ const Response = ({
 
     return (
         <Obscured untilTimestamp={typingRevealTimestamp}>
-            <div lang={response.language}>
+            <ConversationGroup lang={response.language}>
                 <Obscured
                     untilTimestamp={revealTimestamp}
                     by={<TypingIndicator />}
@@ -977,16 +1035,30 @@ const Response = ({
                         );
                     })}
                 </Obscured>
-            </div>
+            </ConversationGroup>
         </Obscured>
     );
 };
 
-const IntroStripe = () => {
+const Spinner = () => (
+    <SpinnerContainer>
+        <NavFrontendSpinner />
+    </SpinnerContainer>
+);
+
+const IntroStrip = () => {
     const {status} = useSession();
 
     if (status === 'connecting') {
-        return <AlertStripe type='info'>Kobler til...</AlertStripe>;
+        return (
+            <AlertStrip type='info'>
+                <AlertStripContainer>
+                    <AlertStripText>Kobler til...</AlertStripText>
+
+                    <Spinner />
+                </AlertStripContainer>
+            </AlertStrip>
+        );
     }
 
     if (status === 'connected') {
@@ -996,14 +1068,20 @@ const IntroStripe = () => {
     return null;
 };
 
-const StatusStripe = () => {
+const StatusStrip = () => {
     const {conversation, error, status} = useSession();
     const conversationStatus = conversation?.state.chat_status;
 
     switch (status) {
         case 'restarting': {
             return (
-                <AlertStripe type='advarsel'>Starter på nytt...</AlertStripe>
+                <AlertStrip type='advarsel'>
+                    <AlertStripContainer>
+                        <AlertStripText>Starter på nytt...</AlertStripText>
+
+                        <Spinner />
+                    </AlertStripContainer>
+                </AlertStrip>
             );
         }
 
@@ -1031,9 +1109,15 @@ const StatusStripe = () => {
         default: {
             if (conversationStatus === 'in_human_chat_queue') {
                 return (
-                    <AlertStripe type='info'>
-                        Venter på ledig kundebehandler...
-                    </AlertStripe>
+                    <AlertStrip type='info'>
+                        <AlertStripContainer>
+                            <AlertStripText>
+                                Venter på ledig kundebehandler...
+                            </AlertStripText>
+
+                            <Spinner />
+                        </AlertStripContainer>
+                    </AlertStrip>
                 );
             }
 
@@ -1043,24 +1127,69 @@ const StatusStripe = () => {
 };
 
 const Container = styled.div`
-    height: 100%;
-    width: 100%;
+    width: 400px;
+    height: 568px;
     box-sizing: border-box;
     display: flex;
     flex-flow: column;
     position: fixed;
-    right: 0;
-    bottom: 0;
+    right: 20px;
+    bottom: 20px;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3), 0 5px 10px rgba(0, 0, 0, 0.1),
+        0 5px 5px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    border-radius: 2px;
+
+    @media ${fullscreenMediaQuery} {
+        height: 100%;
+        width: 100%;
+    }
 `;
 
 const Padding = styled.div`
-    padding: 30px;
+    padding: 14px 12px;
     box-sizing: border-box;
 `;
 
+const Tittel = styled(Innholdstittel)`
+    font-size: 22px;
+`;
+
 const Header = styled.div`
-    background: #eee;
-    border-bottom: 1px solid #999;
+    background: #fff;
+    border-bottom: 1px solid #78706a;
+    box-shadow: inset 0 -1px 0 #fff, 0 1px 4px rgba(0, 0, 0, 0.15),
+        0 2px 5px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 1;
+    padding: 2px 0;
+    display: flex;
+
+    ${Tittel} {
+        margin: auto;
+        margin-left: 0;
+        padding-left: 12px;
+    }
+`;
+
+const HeaderActions = styled.div`
+    margin: auto;
+    margin-right: 0;
+`;
+
+const IconButton = styled.button`
+    appearance: none;
+    background: none;
+    cursor: pointer;
+    width: 48px;
+    height: 48px;
+    padding: 14px;
+    border: 0;
+
+    svg {
+        width: 100%;
+        height: 100%;
+    }
 `;
 
 const Conversation = styled.div`
@@ -1070,9 +1199,147 @@ const Conversation = styled.div`
     position: relative;
 `;
 
-const Stripe = styled.div`
-    margin-top: 30px;
-    margin-bottom: 30px;
+const ConversationGroup = styled.div`
+    margin-top: 10px;
+
+    &:first-child {
+        margin-top: 0;
+    }
+`;
+
+const ConversationBubbleContainer = styled.div`
+    width: 100%;
+    display: flex;
+`;
+
+const avatarSize = '36px';
+const conversationSideWidth = '90%';
+
+const ConversationBubble = styled.div`
+    max-width: ${conversationSideWidth};
+    max-width: calc(${conversationSideWidth} - ${avatarSize} - 8px);
+    background: #e7e9e9;
+    margin: auto;
+    padding: 8px 12px;
+    box-sizing: border-box;
+    display: inline-block;
+    vertical-align: top;
+
+    &:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px #005b82;
+    }
+`;
+
+const ConversationBubbleAvatar = styled.div`
+    background-color: #465557;
+    width: ${avatarSize};
+    height: ${avatarSize};
+    margin-right: 8px;
+    border-radius: 30px;
+    position: relative;
+    overflow: hidden;
+    visibility: hidden;
+
+    ${ConversationGroup} ${ConversationBubbleContainer}:first-child & {
+        visibility: visible;
+
+        &:empty {
+            visibility: hidden;
+        }
+    }
+
+    img {
+        width: 100%;
+        height: auto;
+    }
+
+    &:after {
+        content: '';
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+        position: absolute;
+        border-radius: 30px;
+    }
+`;
+
+const ConversationBubbleLeft = styled(ConversationBubble)`
+    margin-top: 3px;
+    margin-left: 0;
+    border-radius: 4px 18px 18px 4px;
+
+    ${ConversationGroup} ${ConversationBubbleContainer}:first-child & {
+        margin-top: 0;
+        border-radius: 18px 18px 18px 4px;
+    }
+
+    ${ConversationGroup} ${ConversationBubbleContainer}:last-child & {
+        border-radius: 4px 18px 18px 18px;
+    }
+
+    ${ConversationGroup} ${ConversationBubbleContainer}:first-child:last-child & {
+        border-radius: 18px 18px 18px 18px;
+    }
+`;
+
+const ConversationBubbleRight = styled(ConversationBubble)`
+    background-color: #e0f5fb;
+    margin-top: 3px;
+    margin-right: 0;
+    border-radius: 18px 4px 4px 18px;
+
+    ${ConversationGroup} ${ConversationBubbleContainer}:first-child & {
+        margin-top: 0;
+        border-radius: 18px 18px 4px 18px;
+    }
+
+    ${ConversationGroup} ${ConversationBubbleContainer}:last-child & {
+        border-radius: 4px 18px 18px 18px;
+    }
+
+    ${ConversationGroup} ${ConversationBubbleContainer}:first-child:last-child & {
+        border-radius: 18px 18px 18px 18px;
+    }
+`;
+
+const ConversationBubbleText = styled(Normaltekst)``;
+
+const ConversationBubbleContents = styled.span`
+    p {
+        margin: 0;
+        padding: 0;
+    }
+`;
+
+const ConversationBubbleSubtext = styled(Undertekst)`
+    text-align: right;
+    color: #444;
+`;
+
+const ConversationButton = styled(RadioPanelGruppe)`
+    max-width: ${conversationSideWidth};
+    max-width: calc(${conversationSideWidth} - ${avatarSize} - 8px);
+    margin-top: 3px;
+`;
+
+const SpinnerContainer = styled.div`
+    width: 18px;
+    height: 18px;
+    display: inline-block;
+    vertical-align: top;
+
+    svg {
+        width: 100%;
+        height: 100%;
+    }
+`;
+
+const Strip = styled.div`
+    margin-top: 15px;
+    margin-bottom: 15px;
 
     &:first-child {
         margin-top: 0;
@@ -1087,17 +1354,39 @@ const Stripe = styled.div`
     }
 `;
 
-const StatusStripeContainer = styled.div`
+const StatusStripContainer = styled.div`
     position: sticky;
-    bottom: 30px;
+    bottom: 10px;
 
-    ${Stripe} {
-        margin-top: 40px;
+    ${Strip} {
+        margin-top: 15px;
     }
 
-    ${Stripe}:empty + & ${Stripe} {
+    ${Strip}:empty + & ${Strip} {
         margin-top: 0;
     }
+`;
+
+const AlertStrip = styled(AlertStripe)`
+    ${SpinnerContainer} {
+        margin: auto;
+
+        svg circle {
+            stroke: rgba(0, 0, 0, 0.1);
+        }
+
+        svg circle:last-child {
+            stroke: #5690a2;
+        }
+    }
+`;
+
+const AlertStripContainer = styled.div`
+    display: flex;
+`;
+
+const AlertStripText = styled.span`
+    flex: 1;
 `;
 
 const Anchor = styled.div`
@@ -1106,7 +1395,9 @@ const Anchor = styled.div`
 `;
 
 const Form = styled.form`
-    border-top: 1px solid #999;
+    background: #f4f4f4;
+    border-top: 1px solid #78706a;
+    box-shadow: inset 0 1px 0 #fff;
 `;
 
 const Actions = styled.div`
@@ -1154,9 +1445,9 @@ const Chat = () => {
     const messageMaxCharacters = conversation?.state.max_input_chars ?? 110;
     const isAgentTyping = conversation?.state.human_is_typing;
 
-    const scrollToBottom = useCallback(() => {
+    const scrollToBottom = useCallback((options?: ScrollIntoViewOptions) => {
         if (anchor.current) {
-            anchor.current.scrollIntoView({block: 'start'});
+            anchor.current.scrollIntoView({block: 'start', ...options});
         }
     }, []);
 
@@ -1170,8 +1461,9 @@ const Chat = () => {
     const handleAction = useCallback(
         async (id: string) => {
             await sendAction!(id);
+            scrollToBottom({behavior: 'smooth'});
         },
-        [sendAction]
+        [sendAction, scrollToBottom]
     );
 
     const handleSubmit = useCallback(
@@ -1282,44 +1574,47 @@ const Chat = () => {
             {isOpen && (
                 <Container>
                     <Header>
-                        <Padding>
-                            {conversationStatus === 'assigned_to_human' ? (
-                                <h1>Chat med NAV</h1>
-                            ) : (
-                                <h1>Chatbot Frida</h1>
-                            )}
+                        {conversationStatus === 'assigned_to_human' ? (
+                            <Tittel>Chat med NAV</Tittel>
+                        ) : (
+                            <Tittel>Chatbot Frida</Tittel>
+                        )}
 
-                            <button
+                        <HeaderActions>
+                            <IconButton
                                 aria-label='Minimer chatvindu'
                                 type='button'
+                                dangerouslySetInnerHTML={{
+                                    __html: minimizeIcon
+                                }}
                                 onClick={handleClose}
-                            >
-                                Minimer
-                            </button>
+                            />
 
-                            <button
+                            <IconButton
                                 aria-label='Åpne chat i fullskjerm'
                                 type='button'
+                                dangerouslySetInnerHTML={{
+                                    __html: fullscreenIcon
+                                }}
                                 onClick={handleClose}
-                            >
-                                Fullskjerm
-                            </button>
+                            />
 
-                            <button
+                            <IconButton
                                 aria-label='Avslutt chat'
                                 type='button'
+                                dangerouslySetInnerHTML={{
+                                    __html: finishIcon
+                                }}
                                 onClick={handleFinish}
-                            >
-                                Avslutt
-                            </button>
-                        </Padding>
+                            />
+                        </HeaderActions>
                     </Header>
 
                     <Conversation>
                         <Padding>
-                            <Stripe>
-                                <IntroStripe />
-                            </Stripe>
+                            <Strip>
+                                <IntroStrip />
+                            </Strip>
 
                             {responses?.map((response, index) => (
                                 <Response
@@ -1336,11 +1631,11 @@ const Chat = () => {
 
                             {queue && <Response response={queue} />}
 
-                            <StatusStripeContainer>
-                                <Stripe>
-                                    <StatusStripe />
-                                </Stripe>
-                            </StatusStripeContainer>
+                            <StatusStripContainer>
+                                <Strip>
+                                    <StatusStrip />
+                                </Strip>
+                            </StatusStripContainer>
 
                             <Anchor ref={anchor as any} />
                         </Padding>
@@ -1368,6 +1663,7 @@ const Chat = () => {
 
                                 {conversationStatus === 'virtual_agent' && (
                                     <RestartKnapp
+                                        mini
                                         aria-label='Start chat på nytt'
                                         htmlType='button'
                                         type='flat'

@@ -52,13 +52,12 @@ module.exports = {
                                 loader: 'less-loader'
                             }
                         ]
+                    },
+                    {
+                        test: /\.svg$/,
+                        loader: 'svg-inline-loader'
                     }
                 ]
-            }
-        },
-        rules: {
-            svg: {
-                loader: 'svg-inline-loader?classPrefix'
             }
         },
         copy: [{from: './src/index.d.ts', to: './'}]

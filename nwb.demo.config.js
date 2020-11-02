@@ -4,31 +4,21 @@ module.exports = {
         extra: {
             entry: './demo/src/index',
             resolve: {
-                extensions: ['.ts', '.tsx', '.js', '.jsx', '.less']
+                extensions: ['.ts', '.tsx', '.js', '.jsx', '.less', '.svg']
             },
             module: {
                 rules: [
                     {test: /\.ts|\.tsx$/, loader: 'ts-loader'},
                     {
                         test: /\.less$/,
-                        use: [
-                            {
-                                loader: 'style-loader'
-                            },
-                            {
-                                loader: 'css-loader'
-                            },
-                            {
-                                loader: 'less-loader'
-                            }
-                        ]
+                        use: ['style-loader', 'css-loader', 'less-loader']
                     }
                 ]
             }
         },
         rules: {
             svg: {
-                loader: 'svg-inline-loader?classPrefix'
+                loader: 'svg-inline-loader'
             }
         }
     }
