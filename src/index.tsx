@@ -22,6 +22,7 @@ import AlertStripe from 'nav-frontend-alertstriper';
 
 const cookieDomain =
     window.location.hostname === 'localhost' ? undefined : '.nav.no';
+const clientLanguage = window.navigator.language;
 
 const apiUrlBase = 'https://navtest.boost.ai/api/chat/v2';
 const conversationIdCookieName = 'nav-chatbot:conversation';
@@ -92,7 +93,11 @@ interface BoostStartRequestResponse {
 }
 
 async function createBoostSession(): Promise<BoostStartRequestResponse> {
-    const response = await axios.post(apiUrlBase, {command: 'START'});
+    const response = await axios.post(apiUrlBase, {
+        command: 'START',
+        language: clientLanguage
+    });
+
     return response.data;
 }
 
