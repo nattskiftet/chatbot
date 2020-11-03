@@ -21,6 +21,7 @@ import {Knapp} from 'nav-frontend-knapper';
 import AlertStripe from 'nav-frontend-alertstriper';
 import NavFrontendSpinner from 'nav-frontend-spinner';
 
+import fridaIcon from './assets/frida.svg';
 import finishIcon from './assets/finish.svg';
 import minimizeIcon from './assets/minimize.svg';
 import fullscreenIcon from './assets/maximize.svg';
@@ -36,9 +37,9 @@ const languageCookieName = 'nav-chatbot:language';
 const openCookieName = 'nav-chatbot:open';
 const unreadCookieName = 'nav-chatbot:unread';
 const linkDisableTimeout = 1000 * 10;
-const botResponseRevealDelay = 2000;
+const botResponseRevealDelay = 1250;
 const botResponseRevealDelayBuffer = botResponseRevealDelay / 2;
-const fullscreenMediaQuery = '(max-width: 500px)';
+const fullscreenMediaQuery = '(max-width: 500px), (max-height: 630px)';
 
 interface BoostConversation {
     id: string;
@@ -228,6 +229,12 @@ type BoostRequestResponse =
     | BoostStartRequestResponse
     | BoostResumeRequestResponse
     | BoostPollRequestResponse;
+
+async function delay(milliseconds: number): Promise<void> {
+    return new Promise((resolve) => {
+        setTimeout(resolve, milliseconds);
+    });
+}
 
 function useLoader() {
     const [loaders, setLoaders] = useState<number[]>([]);
@@ -682,33 +689,53 @@ const SessionProvider = (properties: Record<string, unknown>) => {
 
 const useSession = () => useContext(SessionContext);
 
-const TypingIndicator = () => {
-    const [iteration, setIteration] = useState(0);
+const TypingIndicatorDot = styled.div`
+    background: rgba(0, 0, 0, 0.4);
+    width: 8px;
+    height: 8px;
+    border-radius: 8px;
+    margin: 7px;
+    margin-right: 0;
+    margin-left: 5px;
+    opacity: 0.5;
+    position: relative;
+    top: 2px;
+    animation: animate 0.5s infinite alternate;
+    display: inline-block;
+    vertical-align: top;
 
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setIteration((number) => number + 1);
-        }, 275);
+    &:first-child {
+        margin-left: 0;
+    }
 
-        return () => {
-            clearInterval(interval);
-        };
-    }, []);
+    &:nth-child(1) {
+        animation-delay: 0.33s;
+    }
 
-    switch (iteration % 3) {
-        default:
-        case 0: {
-            return <>&nbsp;.&nbsp;</>;
+    &:nth-child(2) {
+        animation-delay: 0.66s;
+    }
+
+    @keyframes animate {
+        0% {
+            opacity: 0.5;
         }
 
-        case 1: {
-            return <>&nbsp;&nbsp;.</>;
-        }
-
-        case 2: {
-            return <>.&nbsp;&nbsp;</>;
+        100% {
+            opacity: 1;
+            transform: translate3d(0, -40%, 0);
         }
     }
+`;
+
+const TypingIndicator = () => {
+    return (
+        <div>
+            <TypingIndicatorDot />
+            <TypingIndicatorDot />
+            <TypingIndicatorDot />
+        </div>
+    );
 };
 
 interface ObscuredProperties {
@@ -796,11 +823,14 @@ const ResponseElementLink = ({
         }
     }, [link.id, isLoading, onAction, setIsLoading]);
 
-    const handleKeyPress = useCallback((event) => {
-        if (event.key.toLowerCase() === 'enter') {
-            void handleAction();
-        }
-    }, [handleAction]);
+    const handleKeyPress = useCallback(
+        (event) => {
+            if (event.key.toLowerCase() === 'enter') {
+                void handleAction();
+            }
+        },
+        [handleAction]
+    );
 
     useEffect(() => {
         if (isDisabled) {
@@ -873,7 +903,7 @@ const ResponseElement = ({
                     </ConversationBubbleContainer>
 
                     <ConversationBubbleSubtext>
-                        Sender...
+                        Sender... <Spinner />
                     </ConversationBubbleSubtext>
                 </div>
             );
@@ -948,6 +978,20 @@ const ResponseElement = ({
     return null;
 };
 
+const BotTypingIndicator = (properties: {response?: BoostResponse}) => (
+    <ConversationBubbleContainer>
+        <ConversationBubbleAvatar>
+            {properties.response?.avatar_url && (
+                <img src={properties.response.avatar_url} alt='' />
+            )}
+        </ConversationBubbleAvatar>
+
+        <ConversationBubbleLeft isThinking>
+            <TypingIndicator />
+        </ConversationBubbleLeft>
+    </ConversationBubbleContainer>
+);
+
 interface ResponseProperties
     extends Omit<ResponseElementProperties, 'element'> {
     responsesLength?: number;
@@ -992,7 +1036,7 @@ const Response = ({
             <ConversationGroup lang={response.language}>
                 <Obscured
                     untilTimestamp={revealTimestamp}
-                    by={<TypingIndicator />}
+                    by={<BotTypingIndicator {...{response}} />}
                     onReveal={handleReveal}
                 >
                     {response.elements.map((element, index) => {
@@ -1023,7 +1067,7 @@ const Response = ({
                             >
                                 <Obscured
                                     untilTimestamp={elementRevealTimestamp}
-                                    by={<TypingIndicator />}
+                                    by={<BotTypingIndicator />}
                                     onReveal={handleReveal}
                                 >
                                     <ResponseElement
@@ -1126,24 +1170,64 @@ const StatusStrip = () => {
     }
 };
 
+interface ContainerProperties {
+    isFullscreen?: boolean;
+    isClosing?: boolean;
+    isOpening?: boolean;
+}
+
 const Container = styled.div`
+    background-color: #fff;
     width: 400px;
     height: 568px;
     box-sizing: border-box;
     display: flex;
     flex-flow: column;
     position: fixed;
-    right: 20px;
-    bottom: 20px;
+    right: 0;
+    bottom: 0;
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3), 0 5px 10px rgba(0, 0, 0, 0.1),
         0 5px 5px rgba(0, 0, 0, 0.1);
     overflow: hidden;
     border-radius: 2px;
+    transform: translate3d(-20px, -20px, 0);
+    transition: all 0.3s;
+    transition-properties: width, height, transform;
+    transform-origin: 100% 100%;
+
+    ${(properties: ContainerProperties) =>
+        properties.isFullscreen
+            ? `
+                width: 100%;
+                height: 100%;
+                transform: translate3d(0,0,0);
+            `
+            : ''}
 
     @media ${fullscreenMediaQuery} {
-        height: 100%;
         width: 100%;
+        height: 100%;
+        transform: translate3d(0, 0, 0);
     }
+
+    ${(properties: ContainerProperties) =>
+        properties.isClosing || properties.isOpening
+            ? `
+                @media screen {
+                    height: 200px;
+
+                    ${
+                        properties.isFullscreen
+                            ? 'transform: translate3d(0, 220px, 0);'
+                            : 'transform: translate3d(-20px, 220px, 0);'
+                    }
+                }
+
+                @media ${fullscreenMediaQuery} {
+                    transform: translate3d(0, 220px, 0);
+                }
+            `
+            : ''}
 `;
 
 const Padding = styled.div`
@@ -1155,6 +1239,10 @@ const Tittel = styled(Innholdstittel)`
     font-size: 22px;
 `;
 
+interface HeaderProperties {
+    isHuman?: boolean;
+}
+
 const Header = styled.div`
     background: #fff;
     border-bottom: 1px solid #78706a;
@@ -1162,8 +1250,21 @@ const Header = styled.div`
         0 2px 5px rgba(0, 0, 0, 0.1);
     position: relative;
     z-index: 1;
+    border-radius: 2px 2px 0 0;
     padding: 2px 0;
     display: flex;
+    transition: background-color 0.37s;
+
+    ${(properties: HeaderProperties) =>
+        properties.isHuman
+            ? `
+                background-color: #C6C2BF;
+                box-shadow:
+                    inset 0 -1px 0 rgba(255,255,255,0.3),
+                    0 1px 4px rgba(0, 0, 0, 0.15),
+                    0 2px 5px rgba(0, 0, 0, 0.1);
+            `
+            : ''}
 
     ${Tittel} {
         margin: auto;
@@ -1190,6 +1291,18 @@ const IconButton = styled.button`
         width: 100%;
         height: 100%;
     }
+
+    &:focus {
+        outline: none;
+        box-shadow: inset 0 0 0 3px #005b82;
+        border-radius: 7px;
+    }
+`;
+
+const FullscreenIconButton = styled(IconButton)`
+    @media ${fullscreenMediaQuery} {
+        display: none;
+    }
 `;
 
 const Conversation = styled.div`
@@ -1215,29 +1328,14 @@ const ConversationBubbleContainer = styled.div`
 const avatarSize = '36px';
 const conversationSideWidth = '90%';
 
-const ConversationBubble = styled.div`
-    max-width: ${conversationSideWidth};
-    max-width: calc(${conversationSideWidth} - ${avatarSize} - 8px);
-    background: #e7e9e9;
-    margin: auto;
-    padding: 8px 12px;
-    box-sizing: border-box;
-    display: inline-block;
-    vertical-align: top;
-
-    &:focus {
-        outline: none;
-        box-shadow: 0 0 0 3px #005b82;
-    }
-`;
-
 const ConversationBubbleAvatar = styled.div`
-    background-color: #465557;
+    background-color: #d8d8d8;
     width: ${avatarSize};
     height: ${avatarSize};
     margin-right: 8px;
     border-radius: 30px;
     position: relative;
+    top: 1px;
     overflow: hidden;
     visibility: hidden;
 
@@ -1266,6 +1364,59 @@ const ConversationBubbleAvatar = styled.div`
     }
 `;
 
+interface ConversationBubbleProperties {
+    isHuman?: boolean;
+    isThinking?: boolean;
+}
+
+const ConversationBubble = styled.div`
+    max-width: ${conversationSideWidth};
+    max-width: calc(${conversationSideWidth} - ${avatarSize} - 8px);
+    background: #e7e9e9;
+    margin: auto;
+    padding: 8px 12px;
+    position: relative;
+    overflow-wrap: break-word;
+    box-sizing: border-box;
+    display: inline-block;
+    vertical-align: top;
+
+    ${(properties: ConversationBubbleProperties) =>
+        properties.isHuman ? `background-color: #CDE7D8;` : ''}
+
+    &:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px #005b82;
+    }
+
+    ${(properties: ConversationBubbleProperties) =>
+        properties.isThinking
+            ? `
+                &:before {
+                    content: '';
+                    background-color: inherit;
+                    width: 5px;
+                    height: 5px;
+                    border-radius: 5px;
+                    position: absolute;
+                    bottom: -2px;
+                    left: -7px;
+                }
+
+                &:after {
+                    content: '';
+                    background-color: inherit;
+                    width: 12px;
+                    height: 12px;
+                    border-radius: 12px;
+                    position: absolute;
+                    bottom: 1px;
+                    left: -2px;
+                }
+            `
+            : ''}
+`;
+
 const ConversationBubbleLeft = styled(ConversationBubble)`
     margin-top: 3px;
     margin-left: 0;
@@ -1289,20 +1440,7 @@ const ConversationBubbleRight = styled(ConversationBubble)`
     background-color: #e0f5fb;
     margin-top: 3px;
     margin-right: 0;
-    border-radius: 18px 4px 4px 18px;
-
-    ${ConversationGroup} ${ConversationBubbleContainer}:first-child & {
-        margin-top: 0;
-        border-radius: 18px 18px 4px 18px;
-    }
-
-    ${ConversationGroup} ${ConversationBubbleContainer}:last-child & {
-        border-radius: 4px 18px 18px 18px;
-    }
-
-    ${ConversationGroup} ${ConversationBubbleContainer}:first-child:last-child & {
-        border-radius: 18px 18px 18px 18px;
-    }
+    border-radius: 18px 18px 18px 18px;
 `;
 
 const ConversationBubbleText = styled(Normaltekst)``;
@@ -1325,9 +1463,11 @@ const ConversationButton = styled(RadioPanelGruppe)`
     margin-top: 3px;
 `;
 
-const SpinnerContainer = styled.div`
-    width: 18px;
-    height: 18px;
+const SpinnerContainer = styled.span`
+    width: 0.8em;
+    height: 0.8em;
+    margin: auto;
+    margin-left: 4px;
     display: inline-block;
     vertical-align: top;
 
@@ -1368,8 +1508,12 @@ const StatusStripContainer = styled.div`
 `;
 
 const AlertStrip = styled(AlertStripe)`
+    backdrop-filter: blur(2px);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+
     ${SpinnerContainer} {
-        margin: auto;
+        position: relative;
+        top: -3px;
 
         svg circle {
             stroke: rgba(0, 0, 0, 0.1);
@@ -1406,13 +1550,127 @@ const Actions = styled.div`
     flex-direction: row-reverse;
 `;
 
-const Separator = styled.div`
-    flex: 1;
-`;
-
 const RestartKnapp = styled(Knapp)`
     padding: 0 15px;
     margin-right: 10px;
+`;
+
+const openButtonAvatarSizeNumber = 60;
+const openButtonAvatarSize = `${openButtonAvatarSizeNumber}px`;
+
+interface OpenButtonProperties {
+    isVisible?: boolean;
+}
+
+const OpenButton = styled.button`
+    appearance: none;
+    background: #fff;
+    margin-right: ${openButtonAvatarSizeNumber / 2}px;
+    margin-bottom: ${openButtonAvatarSizeNumber / 5}px;
+    padding: 8px 15px;
+    position: fixed;
+    bottom: 25px;
+    right: 25px;
+    border: 0;
+    cursor: pointer;
+    border-radius: 30px;
+    transform: ${(properties: OpenButtonProperties) =>
+        properties.isVisible ? 'scale(1)' : 'scale(0)'};
+
+    opacity: ${(properties: OpenButtonProperties) =>
+        properties.isVisible ? '1' : '0'};
+
+    transition: ${(properties: OpenButtonProperties) =>
+        properties.isVisible
+            ? 'transform 0.37s, opacity 0.1s 0.2s'
+            : 'transform 0.2s, opacity 0.1s'};
+
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4),
+        0 0 0 2px rgba(255, 255, 255, 1), 0 1px 4px rgba(0, 0, 0, 0.5),
+        0 4px 10px rgba(0, 0, 0, 0.2);
+
+    &:hover {
+        background-color: #005b82;
+    }
+
+    &:focus {
+        background: #005b82;
+        outline: none;
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4),
+            0 0 0 2px rgba(255, 255, 255, 1), 0 1px 4px rgba(0, 0, 0, 0.6),
+            0 4px 10px rgba(0, 0, 0, 0.3), 0 0 0 4px #005b82;
+    }
+`;
+
+const OpenButtonText = styled(Normaltekst)`
+    padding-right: ${openButtonAvatarSizeNumber / 2 - 4}px;
+    display: inline-block;
+    vertical-align: top;
+
+    ${OpenButton}:focus &, ${OpenButton}:hover & {
+        color: #fff;
+    }
+`;
+
+const OpenButtonAvatar = styled.div`
+    width: ${openButtonAvatarSize};
+    height: ${openButtonAvatarSize};
+    position: absolute;
+    top: 50%;
+    right: -${openButtonAvatarSizeNumber / 2}px;
+    transform: translateY(-50%);
+    transition: transform 0.2s;
+    display: inline-block;
+    vertical-align: top;
+
+    ${OpenButton}:hover & {
+        transform: translateY(-50%) scale(1.1);
+    }
+
+    svg {
+        width: 100%;
+        height: 100%;
+    }
+
+    &:before {
+        content: '';
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.3),
+            0 0 0 2px rgba(255, 255, 255, 1), 0 1px 4px rgba(0, 0, 0, 0.6),
+            0 4px 10px rgba(0, 0, 0, 0.3);
+        border-radius: ${openButtonAvatarSize};
+    }
+
+    ${OpenButton}:focus &:before {
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.3),
+            0 0 0 2px rgba(255, 255, 255, 1), 0 1px 4px rgba(0, 0, 0, 0.6),
+            0 4px 10px rgba(0, 0, 0, 0.3), 0 0 0 4px #005b82;
+    }
+`;
+
+const OpenButtonUnreadCount = styled(Undertekst)`
+    background: #c30000;
+    width: 21px;
+    height: 21px;
+    text-align: center;
+    color: #fff;
+    border-radius: 21px;
+    position: absolute;
+    top: 50%;
+    right: -${openButtonAvatarSizeNumber / 2}px;
+    transform: translateY(-${openButtonAvatarSizeNumber / 2}px);
+    transition: transform 0.2s;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.3),
+        0 0 0 2px rgba(255, 255, 255, 1);
+    pointer-events: none;
+
+    &:empty {
+        transform: translateY(-${openButtonAvatarSizeNumber / 2}px) scale(0);
+    }
 `;
 
 const Chat = () => {
@@ -1430,8 +1688,12 @@ const Chat = () => {
         sendPing
     } = useContext(SessionContext);
 
+    const reference = useRef<HTMLDivElement>();
     const anchor = useRef<HTMLDivElement>();
     const [message, setMessage] = useState<string>('');
+    const [isClosing, setIsClosing] = useState<boolean>(false);
+    const [isOpening, setIsOpening] = useState<boolean>(false);
+    const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
     const [isOpen, setIsOpen] = useState<boolean>(
         () => cookies.get(openCookieName) === 'true'
     );
@@ -1490,37 +1752,57 @@ const Chat = () => {
         [handleSubmit]
     );
 
-    const handleOpen = useCallback(() => {
+    const handleOpen = useCallback(async () => {
+        setIsOpening(true);
         setIsOpen(true);
-        setUnreadCount(0);
-        scrollToBottom();
 
         if (status === 'disconnected' || status === 'ended') {
             void start!();
         }
+
+        setUnreadCount(0);
+        scrollToBottom();
+
+        if (reference.current) {
+            reference.current.focus();
+        }
     }, [status, start, scrollToBottom]);
 
-    const handleClose = useCallback(() => {
-        setIsOpen(false);
-        setUnreadCount(0);
+    const toggleFullscreen = useCallback(() => {
+        setIsFullscreen((previousState) => !previousState);
     }, []);
+
+    const handleClose = useCallback(async () => {
+        setIsClosing(true);
+        await delay(370);
+        setIsOpen(false);
+        setIsFullscreen(false);
+        setUnreadCount(0);
+    }, [setIsClosing]);
 
     const handleRestart = useCallback(() => {
         void restart!();
         setUnreadCount(0);
     }, [restart]);
 
-    const handleFinish = useCallback(() => {
+    const handleFinish = useCallback(async () => {
+        await handleClose();
         void finish!();
-        setIsOpen(false);
-        setUnreadCount(0);
-    }, [finish]);
+    }, [finish, handleClose]);
 
     useEffect(() => {
         if (isOpen && (status === 'disconnected' || status === 'ended')) {
             void start!();
         }
     }, [start, isOpen, status]);
+
+    useEffect(() => {
+        if (isOpen && isOpening) {
+            setIsOpening(false);
+        } else if (!isOpen && isClosing) {
+            setIsClosing(false);
+        }
+    }, [isOpen, isOpening, isClosing]);
 
     useEffect(() => {
         cookies.set(openCookieName, String(isOpen), {domain: cookieDomain});
@@ -1558,23 +1840,45 @@ const Chat = () => {
         [message]
     );
 
+    const isConsideredOpen = isOpen || isOpening;
+    const isHuman = conversationStatus === 'assigned_to_human';
+    let openButtonLabel = status === 'connected' ? 'Åpne chat' : 'Chat med oss';
+
+    if (unreadCount > 0) {
+        openButtonLabel +=
+            unreadCount > 1
+                ? ` (${unreadCount} uleste meldinger)`
+                : ` (${unreadCount} ulest melding)`;
+    }
+
     return (
         <>
-            {isOpen ? (
-                <button type='button' onClick={handleClose}>
-                    Lukk chat
-                </button>
-            ) : (
-                <button type='button' onClick={handleOpen}>
-                    Åpne chat{' '}
-                    {unreadCount > 0 && `(${unreadCount} ulest melding)`}
-                </button>
-            )}
+            <OpenButton
+                type='button'
+                aria-label={openButtonLabel}
+                isVisible={!isOpen && !isOpening}
+                onClick={handleOpen}
+            >
+                <OpenButtonText>Chat med oss</OpenButtonText>
 
-            {isOpen && (
-                <Container>
-                    <Header>
-                        {conversationStatus === 'assigned_to_human' ? (
+                <OpenButtonAvatar
+                    dangerouslySetInnerHTML={{
+                        __html: fridaIcon
+                    }}
+                />
+
+                <OpenButtonUnreadCount>
+                    {unreadCount > 0 ? `${unreadCount}` : ''}
+                </OpenButtonUnreadCount>
+            </OpenButton>
+
+            {isConsideredOpen && (
+                <Container
+                    ref={reference as any}
+                    {...{isFullscreen, isClosing, isOpening}}
+                >
+                    <Header {...{isHuman}}>
+                        {isHuman ? (
                             <Tittel>Chat med NAV</Tittel>
                         ) : (
                             <Tittel>Chatbot Frida</Tittel>
@@ -1590,14 +1894,25 @@ const Chat = () => {
                                 onClick={handleClose}
                             />
 
-                            <IconButton
-                                aria-label='Åpne chat i fullskjerm'
-                                type='button'
-                                dangerouslySetInnerHTML={{
-                                    __html: fullscreenIcon
-                                }}
-                                onClick={handleClose}
-                            />
+                            {isFullscreen ? (
+                                <FullscreenIconButton
+                                    aria-label='Bruk mindre chatvindu'
+                                    type='button'
+                                    dangerouslySetInnerHTML={{
+                                        __html: contractIcon
+                                    }}
+                                    onClick={toggleFullscreen}
+                                />
+                            ) : (
+                                <FullscreenIconButton
+                                    aria-label='Åpne chat i fullskjerm'
+                                    type='button'
+                                    dangerouslySetInnerHTML={{
+                                        __html: fullscreenIcon
+                                    }}
+                                    onClick={toggleFullscreen}
+                                />
+                            )}
 
                             <IconButton
                                 aria-label='Avslutt chat'
@@ -1627,7 +1942,20 @@ const Chat = () => {
                                 />
                             ))}
 
-                            {isAgentTyping && <TypingIndicator />}
+                            {isAgentTyping && (
+                                <ConversationGroup>
+                                    <ConversationBubbleContainer>
+                                        <ConversationBubbleAvatar />
+
+                                        <ConversationBubbleLeft
+                                            isThinking
+                                            isHuman
+                                        >
+                                            <TypingIndicator />
+                                        </ConversationBubbleLeft>
+                                    </ConversationBubbleContainer>
+                                </ConversationGroup>
+                            )}
 
                             {queue && <Response response={queue} />}
 
