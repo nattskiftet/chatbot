@@ -1,13 +1,11 @@
 module.exports = {
     type: 'react-component',
+    browsers: '>0.01%',
     npm: {
         umd: {
             global: 'NAVChatBot',
             externals: {
                 react: 'React',
-                moment: 'moment',
-                'react-app-polyfill/ie11': 'react-app-polyfill/ie11',
-                'react-app-polyfill/stable': 'react-app-polyfill/stable',
                 '@navikt/fnrvalidator': '@navikt/fnrvalidator',
                 'nav-frontend-alertstriper': 'nav-frontend-alertstriper',
                 'nav-frontend-alertstriper-style':
@@ -22,6 +20,8 @@ module.exports = {
                 'nav-frontend-paneler-style': 'nav-frontend-paneler-style',
                 'nav-frontend-skjema': 'nav-frontend-skjema',
                 'nav-frontend-skjema-style': 'nav-frontend-skjema-style',
+                'nav-frontend-spinner': 'nav-frontend-spinner',
+                'nav-frontend-spinner-style': 'nav-frontend-spinner-style',
                 'nav-frontend-typografi': 'nav-frontend-typografi',
                 'nav-frontend-typografi-style': 'nav-frontend-typografi-style',
                 'styled-components': 'styled-components'
@@ -38,26 +38,20 @@ module.exports = {
             },
             module: {
                 rules: [
-                    {test: /\.ts|\.tsx$/, loader: 'ts-loader'},
                     {
-                        test: /\.less$/,
-                        use: [
-                            {
-                                loader: 'style-loader'
-                            },
-                            {
-                                loader: 'css-loader'
-                            },
-                            {
-                                loader: 'less-loader'
-                            }
-                        ]
+                        test: /\.ts|\.tsx$/,
+                        loader: 'ts-loader'
                     },
                     {
-                        test: /\.svg$/,
-                        loader: 'svg-inline-loader'
+                        test: /\.less$/,
+                        use: ['style-loader', 'css-loader', 'less-loader']
                     }
                 ]
+            }
+        },
+        rules: {
+            svg: {
+                loader: 'svg-inline-loader'
             }
         },
         copy: [{from: './src/index.d.ts', to: './'}]

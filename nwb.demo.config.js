@@ -4,7 +4,7 @@ module.exports = {
         extra: {
             entry: './demo/src/index',
             resolve: {
-                extensions: ['.ts', '.tsx', '.js', '.jsx', '.less', '.svg']
+                extensions: ['.ts', '.tsx', '.js', '.jsx', '.less']
             },
             module: {
                 rules: [
