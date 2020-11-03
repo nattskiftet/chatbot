@@ -1839,7 +1839,9 @@ const Chat = () => {
 
     const isConsideredOpen = isOpen || isOpening;
     const isHuman = conversationStatus === 'assigned_to_human';
-    let openButtonLabel = status === 'connected' ? 'Åpne chat' : 'Chat med oss';
+    const openButtonLabelPrefix =
+        status === 'connected' ? 'Åpne chat' : 'Chat med oss';
+    let openButtonLabel = openButtonLabelPrefix;
 
     if (unreadCount > 0) {
         openButtonLabel +=
@@ -1856,7 +1858,7 @@ const Chat = () => {
                 isVisible={!isOpen && !isOpening}
                 onClick={handleOpen}
             >
-                <OpenButtonText>Chat med oss</OpenButtonText>
+                <OpenButtonText>{openButtonLabelPrefix}</OpenButtonText>
 
                 <OpenButtonAvatar
                     dangerouslySetInnerHTML={{
