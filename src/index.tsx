@@ -810,14 +810,12 @@ const Obscured = ({
 };
 
 interface ResponseElementLinkProperties {
-    conversation?: BoostConversation;
     response: BoostResponse;
     link: BoostResponseElementLinksItem;
     onAction?: Session['sendAction'];
 }
 
 const ResponseElementLink = ({
-    conversation,
     response,
     link,
     onAction
@@ -861,8 +859,6 @@ const ResponseElementLink = ({
     }, [isDisabled]);
 
     if (link.url && link.type === 'external_link') {
-        const isHuman = conversation?.state.chat_status === 'assigned_to_human';
-
         return (
             <ConversationBubbleContainer>
                 <ConversationBubbleAvatar>
@@ -871,7 +867,7 @@ const ResponseElementLink = ({
                     )}
                 </ConversationBubbleAvatar>
 
-                <ConversationBubbleLeft {...{isHuman}}>
+                <ConversationBubbleLeft>
                     <ConversationBubbleText>
                         <a href={link.url}>{link.text}</a>
                     </ConversationBubbleText>
@@ -901,15 +897,12 @@ interface ResponseElementProperties
 }
 
 const ResponseElement = ({
-    conversation,
     response,
     responseIndex,
     element,
     responses,
     ...properties
 }: ResponseElementProperties) => {
-    const isHuman = conversation?.state.chat_status === 'assigned_to_human';
-
     if (element.type === 'text') {
         if (response.source === 'local') {
             return (
@@ -951,7 +944,7 @@ const ResponseElement = ({
                     <img src={response.avatar_url} alt='' />
                 </ConversationBubbleAvatar>
 
-                <ConversationBubbleLeft tabIndex={0} {...{isHuman}}>
+                <ConversationBubbleLeft tabIndex={0}>
                     <ConversationBubbleText>
                         {element.payload.text}
                     </ConversationBubbleText>
@@ -992,7 +985,7 @@ const ResponseElement = ({
                     )}
                 </ConversationBubbleAvatar>
 
-                <ConversationBubbleLeft tabIndex={0} {...{isHuman}}>
+                <ConversationBubbleLeft tabIndex={0}>
                     <ConversationBubbleText>
                         <ConversationBubbleContents
                             dangerouslySetInnerHTML={{
@@ -1013,7 +1006,7 @@ const ResponseElement = ({
                         // eslint-disable-next-line react/no-array-index-key
                         key={index}
                         {...properties}
-                        {...{conversation, response, link}}
+                        {...{response, link}}
                     />
                 ))}
             </>
@@ -1039,6 +1032,7 @@ const BotTypingIndicator = (properties: {response?: BoostResponse}) => (
 
 interface ResponseProperties
     extends Omit<ResponseElementProperties, 'element'> {
+    conversation?: BoostConversation;
     responsesLength?: number;
     onReveal?: () => void;
 }
@@ -1406,7 +1400,6 @@ const ConversationBubbleAvatar = styled.div`
 `;
 
 interface ConversationBubbleProperties {
-    isHuman?: boolean;
     isThinking?: boolean;
 }
 
@@ -1421,9 +1414,6 @@ const ConversationBubble = styled.div`
     box-sizing: border-box;
     display: inline-block;
     vertical-align: top;
-
-    ${(properties: ConversationBubbleProperties) =>
-        properties.isHuman ? `background-color: #CDE7D8;` : ''}
 
     &:focus {
         outline: none;
@@ -2038,7 +2028,6 @@ const Chat = () => {
 
                                         <ConversationBubbleLeft
                                             isThinking
-                                            isHuman
                                         >
                                             <TypingIndicator />
                                         </ConversationBubbleLeft>
