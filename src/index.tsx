@@ -677,6 +677,12 @@ const SessionProvider = (properties: Record<string, unknown>) => {
         }
     }, [conversationId]);
 
+    useEffect(() => {
+        if (status === 'disconnected' && savedConversationId) {
+            void start();
+        }
+    }, [start, status, savedConversationId]);
+
     return (
         <SessionContext.Provider
             {...properties}
@@ -894,6 +900,7 @@ interface ResponseElementProperties
     responseIndex?: number;
     element: BoostResponseElement;
     responses?: BoostResponse[];
+    responsesLength?: number;
 }
 
 const ResponseElement = ({
@@ -901,6 +908,7 @@ const ResponseElement = ({
     responseIndex,
     element,
     responses,
+    responsesLength,
     ...properties
 }: ResponseElementProperties) => {
     if (element.type === 'text') {
@@ -923,6 +931,11 @@ const ResponseElement = ({
         }
 
         if (response.source === 'client') {
+            const displaySentIndicator =
+                responsesLength && responseIndex
+                    ? responseIndex === responsesLength - 1
+                    : true;
+
             return (
                 <>
                     <ConversationBubbleContainer>
@@ -933,7 +946,11 @@ const ResponseElement = ({
                         </ConversationBubbleRight>
                     </ConversationBubbleContainer>
 
-                    <ConversationBubbleSubtext>Sendt</ConversationBubbleSubtext>
+                    {displaySentIndicator && (
+                        <ConversationBubbleSubtext>
+                            Sendt
+                        </ConversationBubbleSubtext>
+                    )}
                 </>
             );
         }
@@ -1033,7 +1050,6 @@ const BotTypingIndicator = (properties: {response?: BoostResponse}) => (
 interface ResponseProperties
     extends Omit<ResponseElementProperties, 'element'> {
     conversation?: BoostConversation;
-    responsesLength?: number;
     onReveal?: () => void;
 }
 
@@ -1118,6 +1134,7 @@ const Response = ({
                                             conversation,
                                             response,
                                             responseIndex,
+                                            responsesLength,
                                             element
                                         }}
                                     />
@@ -1753,6 +1770,7 @@ const Chat = () => {
         () => cookies.get(openCookieName) === 'true'
     );
 
+    const [updateCount, setUpdateCount] = useState<number>(0);
     const [unreadCount, setUnreadCount] = useState<number>(
         () => Number.parseInt(String(cookies.get(unreadCookieName)), 10) || 0
     );
@@ -1863,16 +1881,16 @@ const Chat = () => {
     }, [isOpen]);
 
     useEffect(() => {
-        if (
-            status === 'disconnected' ||
-            status === 'ended' ||
-            status === 'error'
-        ) {
-            setUnreadCount(0);
-        } else if (status === 'connected') {
-            setUnreadCount((number) => number + 1);
+        if (status === 'connected') {
+            setUpdateCount((number) => number + 1);
         }
     }, [status, responses]);
+
+    useEffect(() => {
+        if (updateCount > 1) {
+            setUnreadCount((number) => number + 1);
+        }
+    }, [updateCount]);
 
     useEffect(() => {
         scrollToBottom();
@@ -1946,7 +1964,9 @@ const Chat = () => {
                 />
 
                 <OpenButtonUnreadCount>
-                    {unreadCount > 0 ? `${unreadCount}` : ''}
+                    {unreadCount > 0
+                        ? `${unreadCount > 9 ? '9' : unreadCount}`
+                        : ''}
                 </OpenButtonUnreadCount>
             </OpenButton>
 
@@ -2026,9 +2046,7 @@ const Chat = () => {
                                     <ConversationBubbleContainer>
                                         <ConversationBubbleAvatar />
 
-                                        <ConversationBubbleLeft
-                                            isThinking
-                                        >
+                                        <ConversationBubbleLeft isThinking>
                                             <TypingIndicator />
                                         </ConversationBubbleLeft>
                                     </ConversationBubbleContainer>
