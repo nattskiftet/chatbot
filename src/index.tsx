@@ -12,10 +12,17 @@ import styled from 'styled-components';
 import axios from 'axios';
 import cookies from 'js-cookie';
 
-import {Innholdstittel, Normaltekst, Undertekst} from 'nav-frontend-typografi';
+import {
+    Innholdstittel,
+    Ingress,
+    Normaltekst,
+    Undertekst
+} from 'nav-frontend-typografi';
+
 import {Textarea, RadioPanelGruppe} from 'nav-frontend-skjema';
 import {Knapp} from 'nav-frontend-knapper';
 import AlertStripe from 'nav-frontend-alertstriper';
+import {LenkepanelBase} from 'nav-frontend-lenkepanel';
 import NavFrontendSpinner from 'nav-frontend-spinner';
 
 import fridaIcon from './assets/frida.svg';
@@ -23,6 +30,7 @@ import finishIcon from './assets/finish.svg';
 import minimizeIcon from './assets/minimize.svg';
 import fullscreenIcon from './assets/maximize.svg';
 import contractIcon from './assets/contract.svg';
+import idPortenIcon from './assets/id-porten.svg';
 
 const cookieDomain =
     window.location.hostname === 'localhost' ? undefined : '.nav.no';
@@ -36,7 +44,14 @@ const unreadCookieName = 'nav-chatbot:unread';
 const linkDisableTimeout = 1000 * 10;
 const botResponseRevealDelay = 1250;
 const botResponseRevealDelayBuffer = botResponseRevealDelay / 2;
-const fullscreenMediaQuery = '(max-width: 500px), (max-height: 630px)';
+const containerWidthNumber = 400;
+const containerWidth = `${containerWidthNumber}px`;
+const containerHeightNumber = 568;
+const containerHeight = `${containerHeightNumber}px`;
+
+const fullscreenMediaQuery = `(max-width: ${
+    containerWidthNumber + 100
+}px), (max-height: ${containerHeightNumber + 50}px)`;
 
 interface BoostConversation {
     id: string;
@@ -795,14 +810,16 @@ const Obscured = ({
 };
 
 interface ResponseElementLinkProperties {
-    link: BoostResponseElementLinksItem;
+    conversation?: BoostConversation;
     response: BoostResponse;
+    link: BoostResponseElementLinksItem;
     onAction?: Session['sendAction'];
 }
 
 const ResponseElementLink = ({
-    link,
+    conversation,
     response,
+    link,
     onAction
 }: ResponseElementLinkProperties) => {
     const [isSelected, setIsSelected] = useState(false);
@@ -844,13 +861,17 @@ const ResponseElementLink = ({
     }, [isDisabled]);
 
     if (link.url && link.type === 'external_link') {
+        const isHuman = conversation?.state.chat_status === 'assigned_to_human';
+
         return (
             <ConversationBubbleContainer>
                 <ConversationBubbleAvatar>
-                    <img src={response.avatar_url} alt='' />
+                    {response.avatar_url && (
+                        <img src={response.avatar_url} alt='' />
+                    )}
                 </ConversationBubbleAvatar>
 
-                <ConversationBubbleLeft>
+                <ConversationBubbleLeft {...{isHuman}}>
                     <ConversationBubbleText>
                         <a href={link.url}>{link.text}</a>
                     </ConversationBubbleText>
@@ -874,19 +895,21 @@ const ResponseElementLink = ({
 
 interface ResponseElementProperties
     extends Omit<ResponseElementLinkProperties, 'link'> {
-    response: BoostResponse;
     responseIndex?: number;
     element: BoostResponseElement;
     responses?: BoostResponse[];
 }
 
 const ResponseElement = ({
+    conversation,
     response,
     responseIndex,
     element,
     responses,
     ...properties
 }: ResponseElementProperties) => {
+    const isHuman = conversation?.state.chat_status === 'assigned_to_human';
+
     if (element.type === 'text') {
         if (response.source === 'local') {
             return (
@@ -928,7 +951,7 @@ const ResponseElement = ({
                     <img src={response.avatar_url} alt='' />
                 </ConversationBubbleAvatar>
 
-                <ConversationBubbleLeft tabIndex={0}>
+                <ConversationBubbleLeft tabIndex={0} {...{isHuman}}>
                     <ConversationBubbleText>
                         {element.payload.text}
                     </ConversationBubbleText>
@@ -938,13 +961,38 @@ const ResponseElement = ({
     }
 
     if (element.type === 'html') {
+        if (String(element.payload.html).startsWith('Init:Auth:')) {
+            const [, authenticationUrl] = element.payload.html.split(
+                'Init:Auth:'
+            );
+
+            return (
+                <LinkPanel border href={authenticationUrl} target='_blank'>
+                    <LinkPanelIcon
+                        dangerouslySetInnerHTML={{
+                            __html: idPortenIcon
+                        }}
+                    />
+
+                    <LinkPanelText>
+                        <Ingress>Elektronisk autentisering</Ingress>
+                        <Normaltekst>
+                            Vennligst logg inn så vi kan hjelpe deg.
+                        </Normaltekst>
+                    </LinkPanelText>
+                </LinkPanel>
+            );
+        }
+
         return (
             <ConversationBubbleContainer>
                 <ConversationBubbleAvatar>
-                    <img src={response.avatar_url} alt='' />
+                    {response?.avatar_url && (
+                        <img src={response.avatar_url} alt='' />
+                    )}
                 </ConversationBubbleAvatar>
 
-                <ConversationBubbleLeft tabIndex={0}>
+                <ConversationBubbleLeft tabIndex={0} {...{isHuman}}>
                     <ConversationBubbleText>
                         <ConversationBubbleContents
                             dangerouslySetInnerHTML={{
@@ -965,7 +1013,7 @@ const ResponseElement = ({
                         // eslint-disable-next-line react/no-array-index-key
                         key={index}
                         {...properties}
-                        {...{response, link}}
+                        {...{conversation, response, link}}
                     />
                 ))}
             </>
@@ -996,18 +1044,21 @@ interface ResponseProperties
 }
 
 const Response = ({
+    conversation,
     response,
     responseIndex,
     responsesLength,
     onReveal,
     ...properties
 }: ResponseProperties) => {
+    const isHuman = conversation?.state.chat_status === 'assigned_to_human';
     const responseDate = new Date(response.date_created);
     const responseTimestamp = responseDate.getTime();
     let typingRevealTimestamp = 0;
     let revealTimestamp = 0;
 
     const shouldObscure =
+        !isHuman &&
         response.source === 'bot' &&
         responseIndex === (responsesLength ?? 1) - 1;
 
@@ -1069,7 +1120,12 @@ const Response = ({
                                 >
                                     <ResponseElement
                                         {...properties}
-                                        {...{response, responseIndex, element}}
+                                        {...{
+                                            conversation,
+                                            response,
+                                            responseIndex,
+                                            element
+                                        }}
                                     />
                                 </Obscured>
                             </Obscured>
@@ -1087,39 +1143,27 @@ const Spinner = () => (
     </SpinnerContainer>
 );
 
-const IntroStrip = () => {
-    const {status} = useSession();
-
-    if (status === 'connecting') {
-        return (
-            <AlertStrip type='info'>
-                <AlertStripContainer>
-                    <AlertStripText>Kobler til...</AlertStripText>
-
-                    <Spinner />
-                </AlertStripContainer>
-            </AlertStrip>
-        );
-    }
-
-    if (status === 'connected') {
-        return <AlertStripe type='info'>Tilkoblet.</AlertStripe>;
-    }
-
-    return null;
-};
-
 const StatusStrip = () => {
     const {conversation, error, status} = useSession();
     const conversationStatus = conversation?.state.chat_status;
 
     switch (status) {
+        case 'connecting': {
+            return (
+                <AlertStrip type='info'>
+                    <AlertStripContainer>
+                        <AlertStripText>Kobler til...</AlertStripText>
+                        <Spinner />
+                    </AlertStripContainer>
+                </AlertStrip>
+            );
+        }
+
         case 'restarting': {
             return (
                 <AlertStrip type='advarsel'>
                     <AlertStripContainer>
                         <AlertStripText>Starter på nytt...</AlertStripText>
-
                         <Spinner />
                     </AlertStripContainer>
                 </AlertStrip>
@@ -1175,8 +1219,8 @@ interface ContainerProperties {
 
 const Container = styled.div`
     background-color: #fff;
-    width: 400px;
-    height: 568px;
+    width: ${containerWidth};
+    height: ${containerHeight};
     box-sizing: border-box;
     display: flex;
     flex-flow: column;
@@ -1449,6 +1493,10 @@ const ConversationBubbleContents = styled.span`
     }
 `;
 
+const ConversationFiller = styled.div`
+    min-height: ${containerHeight};
+`;
+
 const ConversationBubbleSubtext = styled(Undertekst)`
     text-align: right;
     color: #444;
@@ -1530,6 +1578,21 @@ const AlertStripText = styled.span`
     flex: 1;
 `;
 
+const LinkPanel = styled(LenkepanelBase)`
+    margin-top: 15px;
+    margin-bottom: 0;
+`;
+
+const LinkPanelIcon = styled.div`
+    background: #d0d2cf;
+    width: 36px;
+    height: 36px;
+    fill: #2d3033;
+    border-radius: 2px;
+`;
+
+const LinkPanelText = styled.div``;
+
 const Anchor = styled.div`
     overflow-anchor: auto;
     scroll-snap-align: start;
@@ -1572,14 +1635,18 @@ const OpenButton = styled.button`
     cursor: pointer;
     border-radius: 30px;
     transform: ${(properties: OpenButtonProperties) =>
-        properties.isVisible ? 'scale(1)' : 'scale(0)'};
+        properties.isVisible
+            ? 'scale(1)'
+            : `scale(0.8) translate3d(0,${
+                  openButtonAvatarSizeNumber * 2
+              }px,0)`};
 
     opacity: ${(properties: OpenButtonProperties) =>
         properties.isVisible ? '1' : '0'};
 
     transition: ${(properties: OpenButtonProperties) =>
         properties.isVisible
-            ? 'transform 0.37s, opacity 0.1s 0.2s'
+            ? 'transform 0.5s, opacity 0.2s 0.3s'
             : 'transform 0.2s, opacity 0.1s'};
 
     box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4),
@@ -1691,6 +1758,7 @@ const Chat = () => {
     const [isClosing, setIsClosing] = useState<boolean>(false);
     const [isOpening, setIsOpening] = useState<boolean>(false);
     const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+    const [isAgentTyping, setIsAgentTyping] = useState<boolean>(false);
     const [isOpen, setIsOpen] = useState<boolean>(
         () => cookies.get(openCookieName) === 'true'
     );
@@ -1702,7 +1770,6 @@ const Chat = () => {
     const responsesLength = responses?.length;
     const conversationStatus = conversation?.state.chat_status;
     const messageMaxCharacters = conversation?.state.max_input_chars ?? 110;
-    const isAgentTyping = conversation?.state.human_is_typing;
 
     const scrollToBottom = useCallback((options?: ScrollIntoViewOptions) => {
         if (anchor.current) {
@@ -1827,6 +1894,28 @@ const Chat = () => {
         });
     }, [unreadCount]);
 
+    useEffect(() => {
+        const isHumanTyping = Boolean(conversation?.state.human_is_typing);
+
+        if (isHumanTyping) {
+            setIsAgentTyping(isHumanTyping);
+        } else {
+            const timeout = setTimeout(() => {
+                setIsAgentTyping(isHumanTyping);
+            }, 1000);
+
+            return () => {
+                clearTimeout(timeout);
+            };
+        }
+
+        return undefined;
+    }, [conversation?.state.human_is_typing]);
+
+    useEffect(() => {
+        setIsAgentTyping(false);
+    }, [responses]);
+
     useDebouncedEffect(
         2000,
         () => {
@@ -1926,14 +2015,15 @@ const Chat = () => {
 
                     <Conversation>
                         <Padding>
-                            <Strip>
-                                <IntroStrip />
-                            </Strip>
+                            {(status === 'connecting' ||
+                                status === 'restarting') && (
+                                <ConversationFiller />
+                            )}
 
                             {responses?.map((response, index) => (
                                 <Response
                                     key={response.id}
-                                    {...{response, responses}}
+                                    {...{conversation, response, responses}}
                                     responseIndex={index}
                                     responsesLength={responsesLength}
                                     onAction={handleAction}

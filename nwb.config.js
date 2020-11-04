@@ -10,13 +10,18 @@ module.exports = {
                 'nav-frontend-alertstriper': 'nav-frontend-alertstriper',
                 'nav-frontend-alertstriper-style':
                     'nav-frontend-alertstriper-style',
+                'nav-frontend-chevron-style': 'nav-frontend-chevron-style',
                 'nav-frontend-core': 'nav-frontend-core',
                 'nav-frontend-ikoner-assets': 'nav-frontend-ikoner-assets',
                 'nav-frontend-js-utils': 'nav-frontend-js-utils',
                 'nav-frontend-knapper': 'nav-frontend-knapper',
                 'nav-frontend-knapper-style': 'nav-frontend-knapper-style',
+                'nav-frontend-lenkepanel': 'nav-frontend-lenkepanel',
+                'nav-frontend-lenkepanel-style':
+                    'nav-frontend-lenkepanel-style',
                 'nav-frontend-lenker': 'nav-frontend-lenker',
                 'nav-frontend-lenker-style': 'nav-frontend-lenker-style',
+                'nav-frontend-paneler': 'nav-frontend-paneler',
                 'nav-frontend-paneler-style': 'nav-frontend-paneler-style',
                 'nav-frontend-skjema': 'nav-frontend-skjema',
                 'nav-frontend-skjema-style': 'nav-frontend-skjema-style',
