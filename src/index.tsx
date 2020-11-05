@@ -41,13 +41,15 @@ const conversationIdCookieName = 'nav-chatbot:conversation';
 const languageCookieName = 'nav-chatbot:language';
 const openCookieName = 'nav-chatbot:open';
 const unreadCookieName = 'nav-chatbot:unread';
-const linkDisableTimeout = 1000 * 10;
-const botResponseRevealDelay = 1250;
-const botResponseRevealDelayBuffer = botResponseRevealDelay / 2;
 const containerWidthNumber = 400;
 const containerWidth = `${containerWidthNumber}px`;
 const containerHeightNumber = 568;
 const containerHeight = `${containerHeightNumber}px`;
+const linkDisableTimeout = 1000 * 10;
+const botResponseRevealDelay = 1250;
+const botResponseRevealDelayBuffer = botResponseRevealDelay / 2;
+const minimumPollTimeout = 1000;
+const maximumPollTimeout = 2500;
 
 const fullscreenMediaQuery = `(max-width: ${
     containerWidthNumber + 100
@@ -290,6 +292,7 @@ function useDebouncedEffect(
             setPreviousTimestamp(currentTimestamp);
             callback();
         }
+
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [...dependencies, timeout, previousTimestamp, callback]);
 }
@@ -370,6 +373,7 @@ const SessionProvider = (properties: Record<string, unknown>) => {
 
     const [responses, setResponses] = useState<BoostResponse[] | undefined>();
     const [queue, setQueue] = useState<BoostResponse>();
+    const [pollMultiplier, setPollMultiplier] = useState<number>(1);
 
     const handleError = useCallback((error: any) => {
         if (error?.response) {
@@ -419,6 +423,7 @@ const SessionProvider = (properties: Record<string, unknown>) => {
                     void handleError(error);
                 });
 
+                setPollMultiplier(0.25);
                 finishLoading();
             }
         },
@@ -437,6 +442,7 @@ const SessionProvider = (properties: Record<string, unknown>) => {
                     void handleError(error);
                 });
 
+                setPollMultiplier(0.25);
                 finishLoading();
             }
         },
@@ -620,7 +626,6 @@ const SessionProvider = (properties: Record<string, unknown>) => {
 
     useEffect(() => {
         if (conversationId) {
-            let timeout: number | undefined;
             let shouldUpdate = true;
 
             const poll = async () => {
@@ -641,6 +646,12 @@ const SessionProvider = (properties: Record<string, unknown>) => {
                             }
                         }
 
+                        if (updatedSession.responses.length === 0) {
+                            setPollMultiplier((number) => number + 0.25);
+                        } else {
+                            setPollMultiplier(1);
+                        }
+
                         if (shouldUpdate) {
                             update(updatedSession);
                         }
@@ -650,11 +661,15 @@ const SessionProvider = (properties: Record<string, unknown>) => {
                             void handleError(error);
                         }
                     });
-
-                timeout = setTimeout(poll, 1000);
             };
 
-            timeout = setTimeout(poll, 1000);
+            const timeout = setTimeout(
+                poll,
+                Math.min(
+                    maximumPollTimeout,
+                    minimumPollTimeout * pollMultiplier
+                )
+            );
 
             return () => {
                 shouldUpdate = false;
@@ -666,14 +681,24 @@ const SessionProvider = (properties: Record<string, unknown>) => {
         }
 
         return undefined;
-    }, [status, conversationId, responses, update, handleError]);
+    }, [
+        status,
+        conversationId,
+        responses,
+        pollMultiplier,
+        update,
+        handleError
+    ]);
 
     useEffect(() => {
+        setSavedConversationId(conversationId);
+
         if (conversationId) {
-            setSavedConversationId(conversationId);
             cookies.set(conversationIdCookieName, conversationId, {
                 domain: cookieDomain
             });
+        } else {
+            cookies.remove(conversationIdCookieName);
         }
     }, [conversationId]);
 
@@ -1572,7 +1597,7 @@ const AlertStrip = styled(AlertStripe)`
         }
 
         svg circle:last-child {
-            stroke: #5690a2;
+            stroke: rgba(0, 0, 0, 0.5);
         }
     }
 `;
@@ -1587,18 +1612,26 @@ const AlertStripText = styled.span`
 
 const LinkPanel = styled(LenkepanelBase)`
     margin-top: 15px;
-    margin-bottom: 0;
+    margin-bottom: 15px;
+
+    ${ConversationGroup}:nth-last-child(3) & {
+        margin-bottom: 0;
+    }
 `;
 
 const LinkPanelIcon = styled.div`
     background: #d0d2cf;
     width: 36px;
     height: 36px;
+    margin-left: 5px;
     fill: #2d3033;
     border-radius: 2px;
 `;
 
-const LinkPanelText = styled.div``;
+const LinkPanelText = styled.div`
+    margin-left: 20px;
+    flex: 1;
+`;
 
 const Anchor = styled.div`
     overflow-anchor: auto;
@@ -1781,7 +1814,11 @@ const Chat = () => {
 
     const scrollToBottom = useCallback((options?: ScrollIntoViewOptions) => {
         if (anchor.current) {
-            anchor.current.scrollIntoView({block: 'start', ...options});
+            anchor.current.scrollIntoView({
+                block: 'start',
+                behavior: 'smooth',
+                ...options
+            });
         }
     }, []);
 
@@ -1795,7 +1832,7 @@ const Chat = () => {
     const handleAction = useCallback(
         async (id: string) => {
             await sendAction!(id);
-            scrollToBottom({behavior: 'smooth'});
+            scrollToBottom();
         },
         [sendAction, scrollToBottom]
     );
@@ -1833,7 +1870,7 @@ const Chat = () => {
         }
 
         setUnreadCount(0);
-        scrollToBottom();
+        scrollToBottom({behavior: 'auto'});
 
         if (reference.current) {
             reference.current.focus();
