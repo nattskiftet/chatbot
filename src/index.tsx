@@ -423,7 +423,7 @@ const SessionProvider = (properties: Record<string, unknown>) => {
                     void handleError(error);
                 });
 
-                setPollMultiplier(0.25);
+                setPollMultiplier(0.1);
                 finishLoading();
             }
         },
@@ -442,7 +442,7 @@ const SessionProvider = (properties: Record<string, unknown>) => {
                     void handleError(error);
                 });
 
-                setPollMultiplier(0.25);
+                setPollMultiplier(0.1);
                 finishLoading();
             }
         },
@@ -912,7 +912,18 @@ const ResponseElementLink = ({
             <ConversationBubbleAvatar />
             <ConversationButton
                 name={link.text}
-                radios={[{label: link.text, value: link.text, id: link.text}]}
+                radios={[
+                    {
+                        id: link.text,
+                        value: link.text,
+                        label: (
+                            <>
+                                {isLoading && <Spinner />}
+                                {link.text}
+                            </>
+                        )
+                    }
+                ]}
                 checked={isSelected || isLoading ? link.text : undefined}
                 onChange={handleAction}
             />
@@ -1441,6 +1452,20 @@ const ConversationBubbleAvatar = styled.div`
     }
 `;
 
+const SpinnerContainer = styled.span`
+    width: 0.8em;
+    height: 0.8em;
+    margin: auto;
+    margin-left: 4px;
+    display: inline-block;
+    vertical-align: top;
+
+    svg {
+        width: 100%;
+        height: 100%;
+    }
+`;
+
 interface ConversationBubbleProperties {
     isThinking?: boolean;
 }
@@ -1538,21 +1563,26 @@ const ConversationButton = styled(RadioPanelGruppe)`
     max-width: ${conversationSideWidth};
     max-width: calc(${conversationSideWidth} - ${avatarSize} - 8px);
     margin-top: 3px;
-`;
+    position: relative;
 
-const SpinnerContainer = styled.span`
-    width: 0.8em;
-    height: 0.8em;
-    margin: auto;
-    margin-left: 4px;
-    display: inline-block;
-    vertical-align: top;
+    ${SpinnerContainer} {
+        transform: translate(0.5px, 0.5px);
+        position: absolute;
+        top: 19px;
+        left: 19px;
 
-    svg {
-        width: 100%;
-        height: 100%;
+        svg circle {
+            stroke: rgba(255, 255, 255, 0.1);
+        }
+
+        svg circle:last-child {
+            stroke: rgba(255, 255, 255, 1);
+        }
     }
 `;
+
+const ConversationButtonContents = styled.div``;
+const ConversationButtonText = styled.span``;
 
 const Strip = styled.div`
     margin-top: 15px;
