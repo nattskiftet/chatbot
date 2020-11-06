@@ -1219,22 +1219,22 @@ const StatusStrip = () => {
 
         case 'ended': {
             return (
-                <AlertStripe type='suksess'>Samtalen er avsluttet.</AlertStripe>
+                <AlertStrip type='suksess'>Samtalen er avsluttet.</AlertStrip>
             );
         }
 
         case 'error': {
             if (error?.code === 'network_error') {
                 return (
-                    <AlertStripe type='feil'>
+                    <AlertStrip type='feil'>
                         Vi får ikke kontakt. Vennligst sjekk
                         internettilkoblingen din og prøv igjen.
-                    </AlertStripe>
+                    </AlertStrip>
                 );
             }
 
             return (
-                <AlertStripe type='feil'>Det har skjedd en feil.</AlertStripe>
+                <AlertStrip type='feil'>Det har skjedd en feil.</AlertStrip>
             );
         }
 
@@ -1581,21 +1581,7 @@ const ConversationButton = styled(RadioPanelGruppe)`
     }
 `;
 
-const ConversationButtonContents = styled.div``;
-const ConversationButtonText = styled.span``;
-
 const Strip = styled.div`
-    margin-top: 15px;
-    margin-bottom: 15px;
-
-    &:first-child {
-        margin-top: 0;
-    }
-
-    &:last-child {
-        margin-bottom: 0;
-    }
-
     &:empty {
         display: none;
     }
@@ -1605,11 +1591,9 @@ const StatusStripContainer = styled.div`
     position: sticky;
     bottom: 10px;
 
-    ${Strip} {
-        margin-top: 15px;
-    }
+    margin-top: 15px;
 
-    ${Strip}:empty + & ${Strip} {
+    &:first-child {
         margin-top: 0;
     }
 `;
@@ -2020,6 +2004,7 @@ const Chat = () => {
                 type='button'
                 aria-label={openButtonLabel}
                 isVisible={!isOpen && !isOpening}
+                tabIndex={isOpen ? -1 : 0}
                 onClick={handleOpen}
             >
                 <OpenButtonText>{openButtonLabelPrefix}</OpenButtonText>
@@ -2135,8 +2120,7 @@ const Chat = () => {
                     <Form onSubmit={handleSubmit}>
                         <Padding>
                             <Textarea
-                                aria-label='Ditt spørsmål'
-                                placeholder='Skriv spørsmålet ditt'
+                                aria-label='Din melding'
                                 name='message'
                                 value={message}
                                 maxLength={messageMaxCharacters}
