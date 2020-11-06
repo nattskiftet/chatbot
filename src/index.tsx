@@ -1233,9 +1233,7 @@ const StatusStrip = () => {
                 );
             }
 
-            return (
-                <AlertStrip type='feil'>Det har skjedd en feil.</AlertStrip>
-            );
+            return <AlertStrip type='feil'>Det har skjedd en feil.</AlertStrip>;
         }
 
         default: {
