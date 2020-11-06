@@ -947,6 +947,17 @@ const ResponseElement = ({
     responsesLength,
     ...properties
 }: ResponseElementProperties) => {
+    const mostRecentClientMessageIndex = useMemo(
+        () =>
+            (responsesLength ?? 0) -
+            (responses
+                ?.slice()
+                .reverse()
+                .findIndex((response) => response.source === 'client') ?? 0) -
+            1,
+        [responses, responsesLength]
+    );
+
     if (element.type === 'text') {
         if (response.source === 'local') {
             return (
@@ -967,10 +978,10 @@ const ResponseElement = ({
         }
 
         if (response.source === 'client') {
-            const displaySentIndicator =
-                responsesLength && responseIndex
-                    ? responseIndex === responsesLength - 1
-                    : true;
+            const displaySentIndicator = Boolean(
+                mostRecentClientMessageIndex === undefined ||
+                    responseIndex === mostRecentClientMessageIndex
+            );
 
             return (
                 <>
