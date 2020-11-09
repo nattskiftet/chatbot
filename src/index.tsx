@@ -1,11 +1,4 @@
-import React, {
-    useRef,
-    useContext,
-    useState,
-    useMemo,
-    useEffect,
-    useCallback
-} from 'react';
+import React, {useRef, useState, useMemo, useEffect, useCallback} from 'react';
 
 import styled from 'styled-components';
 import cookies from 'js-cookie';
