@@ -62,6 +62,247 @@ import {
     unreadCookieName
 } from './configuration';
 
+interface ContainerProperties {
+    isFullscreen?: boolean;
+    isClosing?: boolean;
+    isOpening?: boolean;
+}
+
+const Container = styled.div`
+    background-color: #fff;
+    width: ${containerWidth};
+    height: ${containerHeight};
+    box-sizing: border-box;
+    display: flex;
+    flex-flow: column;
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3), 0 5px 10px rgba(0, 0, 0, 0.1),
+        0 5px 5px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    border-radius: 2px;
+    transform: translate3d(-20px, -20px, 0);
+    transition: width 0.37s, height 0.37s, transform 0.37s;
+    transform-origin: 100% 100%;
+
+    ${(properties: ContainerProperties) =>
+        properties.isFullscreen
+            ? `
+                width: 100%;
+                height: 100%;
+                transform: translate3d(0,0,0);
+            `
+            : ''}
+
+    @media ${fullscreenMediaQuery} {
+        width: 100%;
+        height: 100%;
+        transform: translate3d(0, 0, 0);
+    }
+
+    ${(properties: ContainerProperties) =>
+        properties.isClosing || properties.isOpening
+            ? `
+                @media screen {
+                    height: 200px;
+
+                    ${
+                        properties.isFullscreen
+                            ? 'transform: translate3d(0, 220px, 0);'
+                            : 'transform: translate3d(-20px, 220px, 0);'
+                    }
+                }
+
+                @media ${fullscreenMediaQuery} {
+                    transform: translate3d(0, 220px, 0);
+                }
+            `
+            : ''}
+`;
+
+const Padding = styled.div`
+    padding: 14px 12px;
+    box-sizing: border-box;
+`;
+
+const Tittel = styled(Innholdstittel)`
+    font-size: 22px;
+`;
+
+interface HeaderProperties {
+    isHuman?: boolean;
+}
+
+const Header = styled.div`
+    background: #fff;
+    border-bottom: 1px solid #78706a;
+    box-shadow: inset 0 -1px 0 #fff, 0 1px 4px rgba(0, 0, 0, 0.15),
+        0 2px 5px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 1;
+    border-radius: 2px 2px 0 0;
+    padding: 2px 0;
+    display: flex;
+    transition: background-color 0.37s;
+
+    ${(properties: HeaderProperties) =>
+        properties.isHuman
+            ? `
+                background-color: #C6C2BF;
+                box-shadow:
+                    inset 0 -1px 0 rgba(255,255,255,0.3),
+                    0 1px 4px rgba(0, 0, 0, 0.15),
+                    0 2px 5px rgba(0, 0, 0, 0.1);
+            `
+            : ''}
+
+    ${Tittel} {
+        margin: auto;
+        margin-left: 0;
+        padding-left: 12px;
+    }
+`;
+
+const HeaderActions = styled.div`
+    margin: auto;
+    margin-right: 0;
+`;
+
+const IconButton = styled.button`
+    appearance: none;
+    background: none;
+    cursor: pointer;
+    width: 48px;
+    height: 48px;
+    padding: 14px;
+    border: 0;
+
+    svg {
+        width: 100%;
+        height: 100%;
+    }
+
+    &:focus {
+        outline: none;
+        box-shadow: inset 0 0 0 3px #005b82;
+        border-radius: 7px;
+    }
+`;
+
+const FullscreenIconButton = styled(IconButton)`
+    @media ${fullscreenMediaQuery} {
+        display: none;
+    }
+`;
+
+const Strip = styled.div`
+    &:empty {
+        display: none;
+    }
+`;
+
+const StatusStripContainer = styled.div`
+    position: sticky;
+    bottom: 10px;
+
+    margin-top: 15px;
+
+    &:first-child {
+        margin-top: 0;
+    }
+`;
+
+const Conversation = styled.div`
+    overflow: auto;
+    scroll-snap-type: y proximity;
+    flex: 1;
+    position: relative;
+`;
+
+const ConversationBubbleContents = styled.span`
+    p {
+        margin: 0;
+        padding: 0;
+    }
+`;
+
+const ConversationFiller = styled.div`
+    min-height: ${containerHeight};
+`;
+
+const ConversationBubbleSubtext = styled(Undertekst)`
+    text-align: right;
+    color: #444;
+`;
+
+const ConversationButton = styled(RadioPanelGruppe)`
+    max-width: ${conversationSideWidth};
+    max-width: calc(${conversationSideWidth} - ${avatarSize} - 8px);
+    margin-top: 3px;
+    position: relative;
+
+    ${SpinnerContainer} {
+        transform: translate(0.5px, 0.5px);
+        position: absolute;
+        top: 19px;
+        left: 19px;
+
+        svg circle {
+            stroke: rgba(255, 255, 255, 0.1);
+        }
+
+        svg circle:last-child {
+            stroke: rgba(255, 255, 255, 1);
+        }
+    }
+`;
+
+const LinkPanel = styled(LenkepanelBase)`
+    margin-top: 15px;
+    margin-bottom: 15px;
+
+    ${ConversationGroup}:nth-last-child(3) & {
+        margin-bottom: 0;
+    }
+`;
+
+const LinkPanelIcon = styled.div`
+    background: #d0d2cf;
+    width: 36px;
+    height: 36px;
+    margin-left: 5px;
+    fill: #2d3033;
+    border-radius: 2px;
+`;
+
+const LinkPanelText = styled.div`
+    margin-left: 20px;
+    flex: 1;
+`;
+
+const Anchor = styled.div`
+    overflow-anchor: auto;
+    scroll-snap-align: start;
+`;
+
+const Form = styled.form`
+    background: #f4f4f4;
+    border-top: 1px solid #78706a;
+    box-shadow: inset 0 1px 0 #fff;
+`;
+
+const Actions = styled.div`
+    margin-top: 10px;
+    display: flex;
+    flex-direction: row-reverse;
+`;
+
+const RestartKnapp = styled(Knapp)`
+    padding: 0 15px;
+    margin-right: 10px;
+`;
+
 interface ResponseElementLinkProperties {
     response: BoostResponse;
     link: BoostResponseElementLinksItem;
@@ -372,248 +613,6 @@ const Response = ({
         </Obscured>
     );
 };
-
-interface ContainerProperties {
-    isFullscreen?: boolean;
-    isClosing?: boolean;
-    isOpening?: boolean;
-}
-
-const Container = styled.div`
-    background-color: #fff;
-    width: ${containerWidth};
-    height: ${containerHeight};
-    box-sizing: border-box;
-    display: flex;
-    flex-flow: column;
-    position: fixed;
-    right: 0;
-    bottom: 0;
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3), 0 5px 10px rgba(0, 0, 0, 0.1),
-        0 5px 5px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-    border-radius: 2px;
-    transform: translate3d(-20px, -20px, 0);
-    transition: all 0.3s;
-    transition-properties: width, height, transform;
-    transform-origin: 100% 100%;
-
-    ${(properties: ContainerProperties) =>
-        properties.isFullscreen
-            ? `
-                width: 100%;
-                height: 100%;
-                transform: translate3d(0,0,0);
-            `
-            : ''}
-
-    @media ${fullscreenMediaQuery} {
-        width: 100%;
-        height: 100%;
-        transform: translate3d(0, 0, 0);
-    }
-
-    ${(properties: ContainerProperties) =>
-        properties.isClosing || properties.isOpening
-            ? `
-                @media screen {
-                    height: 200px;
-
-                    ${
-                        properties.isFullscreen
-                            ? 'transform: translate3d(0, 220px, 0);'
-                            : 'transform: translate3d(-20px, 220px, 0);'
-                    }
-                }
-
-                @media ${fullscreenMediaQuery} {
-                    transform: translate3d(0, 220px, 0);
-                }
-            `
-            : ''}
-`;
-
-const Padding = styled.div`
-    padding: 14px 12px;
-    box-sizing: border-box;
-`;
-
-const Tittel = styled(Innholdstittel)`
-    font-size: 22px;
-`;
-
-interface HeaderProperties {
-    isHuman?: boolean;
-}
-
-const Header = styled.div`
-    background: #fff;
-    border-bottom: 1px solid #78706a;
-    box-shadow: inset 0 -1px 0 #fff, 0 1px 4px rgba(0, 0, 0, 0.15),
-        0 2px 5px rgba(0, 0, 0, 0.1);
-    position: relative;
-    z-index: 1;
-    border-radius: 2px 2px 0 0;
-    padding: 2px 0;
-    display: flex;
-    transition: background-color 0.37s;
-
-    ${(properties: HeaderProperties) =>
-        properties.isHuman
-            ? `
-                background-color: #C6C2BF;
-                box-shadow:
-                    inset 0 -1px 0 rgba(255,255,255,0.3),
-                    0 1px 4px rgba(0, 0, 0, 0.15),
-                    0 2px 5px rgba(0, 0, 0, 0.1);
-            `
-            : ''}
-
-    ${Tittel} {
-        margin: auto;
-        margin-left: 0;
-        padding-left: 12px;
-    }
-`;
-
-const HeaderActions = styled.div`
-    margin: auto;
-    margin-right: 0;
-`;
-
-const IconButton = styled.button`
-    appearance: none;
-    background: none;
-    cursor: pointer;
-    width: 48px;
-    height: 48px;
-    padding: 14px;
-    border: 0;
-
-    svg {
-        width: 100%;
-        height: 100%;
-    }
-
-    &:focus {
-        outline: none;
-        box-shadow: inset 0 0 0 3px #005b82;
-        border-radius: 7px;
-    }
-`;
-
-const FullscreenIconButton = styled(IconButton)`
-    @media ${fullscreenMediaQuery} {
-        display: none;
-    }
-`;
-
-const Strip = styled.div`
-    &:empty {
-        display: none;
-    }
-`;
-
-const StatusStripContainer = styled.div`
-    position: sticky;
-    bottom: 10px;
-
-    margin-top: 15px;
-
-    &:first-child {
-        margin-top: 0;
-    }
-`;
-
-const Conversation = styled.div`
-    overflow: auto;
-    scroll-snap-type: y proximity;
-    flex: 1;
-    position: relative;
-`;
-
-const ConversationBubbleContents = styled.span`
-    p {
-        margin: 0;
-        padding: 0;
-    }
-`;
-
-const ConversationFiller = styled.div`
-    min-height: ${containerHeight};
-`;
-
-const ConversationBubbleSubtext = styled(Undertekst)`
-    text-align: right;
-    color: #444;
-`;
-
-const ConversationButton = styled(RadioPanelGruppe)`
-    max-width: ${conversationSideWidth};
-    max-width: calc(${conversationSideWidth} - ${avatarSize} - 8px);
-    margin-top: 3px;
-    position: relative;
-
-    ${SpinnerContainer} {
-        transform: translate(0.5px, 0.5px);
-        position: absolute;
-        top: 19px;
-        left: 19px;
-
-        svg circle {
-            stroke: rgba(255, 255, 255, 0.1);
-        }
-
-        svg circle:last-child {
-            stroke: rgba(255, 255, 255, 1);
-        }
-    }
-`;
-
-const LinkPanel = styled(LenkepanelBase)`
-    margin-top: 15px;
-    margin-bottom: 15px;
-
-    ${ConversationGroup}:nth-last-child(3) & {
-        margin-bottom: 0;
-    }
-`;
-
-const LinkPanelIcon = styled.div`
-    background: #d0d2cf;
-    width: 36px;
-    height: 36px;
-    margin-left: 5px;
-    fill: #2d3033;
-    border-radius: 2px;
-`;
-
-const LinkPanelText = styled.div`
-    margin-left: 20px;
-    flex: 1;
-`;
-
-const Anchor = styled.div`
-    overflow-anchor: auto;
-    scroll-snap-align: start;
-`;
-
-const Form = styled.form`
-    background: #f4f4f4;
-    border-top: 1px solid #78706a;
-    box-shadow: inset 0 1px 0 #fff;
-`;
-
-const Actions = styled.div`
-    margin-top: 10px;
-    display: flex;
-    flex-direction: row-reverse;
-`;
-
-const RestartKnapp = styled(Knapp)`
-    padding: 0 15px;
-    margin-right: 10px;
-`;
 
 const Chat = () => {
     const {
