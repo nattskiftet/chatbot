@@ -105,7 +105,7 @@ const Modal = ({
         if (isOpen && reference.current) {
             reference.current.focus();
         }
-    }, [isOpen, reference.current]);
+    }, [isOpen]);
 
     return (
         <ModalContainer ref={reference as any} {...{isOpen}}>
