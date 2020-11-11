@@ -50,6 +50,8 @@ import ConversationElement, {
     ConversationElementAvatar
 } from './components/conversation';
 
+import Modal, {ModalText, ModalActions} from './components/modal';
+
 import {
     containerWidth,
     containerHeight,
@@ -85,6 +87,7 @@ const Container = styled.div`
     transform: translate3d(-20px, -20px, 0);
     transition: width 0.37s, height 0.37s, transform 0.37s;
     transform-origin: 100% 100%;
+    touch-action: manipulation;
 
     ${(properties: ContainerProperties) =>
         properties.isFullscreen
@@ -301,6 +304,10 @@ const Actions = styled.div`
 const RestartKnapp = styled(Knapp)`
     padding: 0 15px;
     margin-right: 10px;
+`;
+
+const ModalKnapp = styled(Knapp)`
+    margin-left: 5px;
 `;
 
 interface ResponseElementLinkProperties {
@@ -640,6 +647,7 @@ const Chat = () => {
         () => cookies.get(openCookieName) === 'true'
     );
 
+    const [isFinishing, setIsFinishing] = useState<boolean>(false);
     const [updateCount, setUpdateCount] = useState<number>(0);
     const [unreadCount, setUnreadCount] = useState<number>(
         () => Number.parseInt(String(cookies.get(unreadCookieName)), 10) || 0
@@ -732,9 +740,18 @@ const Chat = () => {
     }, [restart]);
 
     const handleFinish = useCallback(async () => {
-        await handleClose();
-        void finish!();
-    }, [finish, handleClose]);
+        if (isFinishing) {
+            await handleClose();
+            void finish!();
+            setIsFinishing(false);
+        } else {
+            setIsFinishing(true);
+        }
+    }, [isFinishing, finish, handleClose]);
+
+    const handleCancelFinish = useCallback(async () => {
+        setIsFinishing(false);
+    }, []);
 
     useEffect(() => {
         if (isOpen && (status === 'disconnected' || status === 'ended')) {
@@ -942,6 +959,40 @@ const Chat = () => {
                             </Actions>
                         </Padding>
                     </Form>
+
+                    <Modal
+                        isOpen={isFinishing}
+                        aria-label='Bekreft avslutning av chat'
+                        onConfirm={handleFinish}
+                    >
+                        <ModalText>
+                            Er du sikker på at du vil avslutte samtalen?
+                        </ModalText>
+
+                        <ModalActions>
+                            <ModalKnapp
+                                mini
+                                kompakt
+                                htmlType='button'
+                                type='flat'
+                                aria-label='Avbryt avslutning'
+                                onClick={handleCancelFinish}
+                            >
+                                Avbryt
+                            </ModalKnapp>
+
+                            <ModalKnapp
+                                mini
+                                kompakt
+                                htmlType='button'
+                                type='hoved'
+                                aria-label='Bekreft avslutning av chat'
+                                onClick={handleFinish}
+                            >
+                                Ja, avslutt
+                            </ModalKnapp>
+                        </ModalActions>
+                    </Modal>
                 </Container>
             )}
         </>
