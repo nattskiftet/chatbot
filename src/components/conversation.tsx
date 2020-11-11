@@ -155,7 +155,7 @@ const ConversationElement = ({
                 {avatarUrl && <img src={avatarUrl} alt='' />}
             </ConversationElementAvatar>
 
-            <Bubble {...{isThinking}} tabIndex={0}>
+            <Bubble {...{isThinking}} tabIndex={isThinking ? undefined : 0}>
                 <ConversationBubbleText>{children}</ConversationBubbleText>
             </Bubble>
         </ConversationElementContainer>
