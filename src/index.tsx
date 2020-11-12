@@ -313,12 +313,14 @@ const ModalKnapp = styled(Knapp)`
 interface ResponseElementLinkProperties {
     response: BoostResponse;
     link: BoostResponseElementLinksItem;
+    tabIndex?: number;
     onAction?: Session['sendAction'];
 }
 
 const ResponseElementLink = ({
     response,
     link,
+    tabIndex,
     onAction
 }: ResponseElementLinkProperties) => {
     const [isSelected, setIsSelected] = useState(false);
@@ -361,8 +363,10 @@ const ResponseElementLink = ({
 
     if (link.url && link.type === 'external_link') {
         return (
-            <ConversationElement avatarUrl={response.avatar_url}>
-                <a href={link.url}>{link.text}</a>
+            <ConversationElement tabIndex={-1} avatarUrl={response.avatar_url}>
+                <a href={link.url} {...{tabIndex}}>
+                    {link.text}
+                </a>
             </ConversationElement>
         );
     }
@@ -376,6 +380,7 @@ const ResponseElementLink = ({
                     {
                         id: link.text,
                         value: link.text,
+                        disabled: tabIndex === -1,
                         label: (
                             <>
                                 {isLoading && <Spinner />}
@@ -397,6 +402,7 @@ interface ResponseElementProperties
     element: BoostResponseElement;
     responses?: BoostResponse[];
     responsesLength?: number;
+    isObscured?: boolean;
 }
 
 const ResponseElement = ({
@@ -405,6 +411,7 @@ const ResponseElement = ({
     element,
     responses,
     responsesLength,
+    isObscured,
     ...properties
 }: ResponseElementProperties) => {
     const mostRecentClientMessageIndex = useMemo(
@@ -422,7 +429,10 @@ const ResponseElement = ({
         if (response.source === 'local') {
             return (
                 <div style={{opacity: 0.7}}>
-                    <ConversationElement alignment='right'>
+                    <ConversationElement
+                        tabIndex={isObscured ? -1 : 0}
+                        alignment='right'
+                    >
                         {element.payload.text}
                     </ConversationElement>
 
@@ -441,7 +451,10 @@ const ResponseElement = ({
 
             return (
                 <>
-                    <ConversationElement alignment='right'>
+                    <ConversationElement
+                        tabIndex={isObscured ? -1 : 0}
+                        alignment='right'
+                    >
                         {element.payload.text}
                     </ConversationElement>
 
@@ -455,7 +468,10 @@ const ResponseElement = ({
         }
 
         return (
-            <ConversationElement avatarUrl={response.avatar_url}>
+            <ConversationElement
+                tabIndex={isObscured ? -1 : 0}
+                avatarUrl={response.avatar_url}
+            >
                 {element.payload.text}
             </ConversationElement>
         );
@@ -468,7 +484,12 @@ const ResponseElement = ({
             );
 
             return (
-                <LinkPanel border href={authenticationUrl} target='_blank'>
+                <LinkPanel
+                    border
+                    href={authenticationUrl}
+                    tabIndex={isObscured ? -1 : 0}
+                    target='_blank'
+                >
                     <LinkPanelIcon
                         dangerouslySetInnerHTML={{
                             __html: idPortenIcon
@@ -486,7 +507,10 @@ const ResponseElement = ({
         }
 
         return (
-            <ConversationElement avatarUrl={response.avatar_url}>
+            <ConversationElement
+                tabIndex={isObscured ? -1 : 0}
+                avatarUrl={response.avatar_url}
+            >
                 <ConversationBubbleContents
                     dangerouslySetInnerHTML={{
                         __html: String(element.payload.html)
@@ -503,6 +527,7 @@ const ResponseElement = ({
                     <ResponseElementLink
                         // eslint-disable-next-line react/no-array-index-key
                         key={index}
+                        tabIndex={isObscured ? -1 : 0}
                         {...properties}
                         {...{response, link}}
                     />
@@ -851,6 +876,7 @@ const Chat = () => {
                             <IconButton
                                 aria-label='Minimer chatvindu'
                                 type='button'
+                                tabIndex={isFinishing ? -1 : 0}
                                 dangerouslySetInnerHTML={{
                                     __html: minimizeIcon
                                 }}
@@ -861,6 +887,7 @@ const Chat = () => {
                                 <FullscreenIconButton
                                     aria-label='Bruk mindre chatvindu'
                                     type='button'
+                                    tabIndex={isFinishing ? -1 : 0}
                                     dangerouslySetInnerHTML={{
                                         __html: contractIcon
                                     }}
@@ -870,6 +897,7 @@ const Chat = () => {
                                 <FullscreenIconButton
                                     aria-label='Åpne chat i fullskjerm'
                                     type='button'
+                                    tabIndex={isFinishing ? -1 : 0}
                                     dangerouslySetInnerHTML={{
                                         __html: fullscreenIcon
                                     }}
@@ -880,6 +908,7 @@ const Chat = () => {
                             <IconButton
                                 aria-label='Avslutt chat'
                                 type='button'
+                                tabIndex={isFinishing ? -1 : 0}
                                 dangerouslySetInnerHTML={{
                                     __html: finishIcon
                                 }}
@@ -901,6 +930,7 @@ const Chat = () => {
                                     {...{conversation, response, responses}}
                                     responseIndex={index}
                                     responsesLength={responsesLength}
+                                    isObscured={isFinishing}
                                     onAction={handleAction}
                                     onReveal={scrollToBottom}
                                 />
@@ -933,6 +963,7 @@ const Chat = () => {
                                 name='message'
                                 value={message}
                                 maxLength={messageMaxCharacters}
+                                tabIndex={isFinishing ? -1 : undefined}
                                 onChange={handleChange}
                                 onKeyDown={handleKeyDown}
                             />
@@ -941,6 +972,7 @@ const Chat = () => {
                                 <Knapp
                                     aria-label='Send melding'
                                     htmlType='submit'
+                                    tabIndex={isFinishing ? -1 : undefined}
                                 >
                                     Send
                                 </Knapp>
@@ -951,6 +983,7 @@ const Chat = () => {
                                         aria-label='Start chat på nytt'
                                         htmlType='button'
                                         type='flat'
+                                        tabIndex={isFinishing ? -1 : undefined}
                                         onClick={handleRestart}
                                     >
                                         Start på nytt

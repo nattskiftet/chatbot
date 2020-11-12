@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import {Normaltekst} from 'nav-frontend-typografi';
 import finishIcon from '../assets/finish.svg';
 
-const ModalContainer = styled.div`
+const ModalContainer = styled.dialog`
     background: rgba(255, 255, 255, 0.6);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
@@ -16,6 +16,7 @@ const ModalContainer = styled.div`
     bottom: 0;
     left: 0;
     z-index: 10;
+    border: 0;
     opacity: 0;
     transition: opacity 0.3s;
     pointer-events: none;
@@ -108,7 +109,12 @@ const Modal = ({
     }, [isOpen]);
 
     return (
-        <ModalContainer ref={reference as any} {...{isOpen}}>
+        <ModalContainer
+            ref={reference as any}
+            {...{isOpen}}
+            aria-modal={isOpen}
+            open={isOpen}
+        >
             <CloseButton
                 aria-label={ariaLabel}
                 type='button'

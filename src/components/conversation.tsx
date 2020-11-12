@@ -135,6 +135,7 @@ interface ConversationElementProperties {
     avatarUrl?: string;
     alignment?: 'left' | 'right';
     isThinking?: boolean;
+    tabIndex?: number;
     children?: React.ReactNode;
 }
 
@@ -142,6 +143,7 @@ const ConversationElement = ({
     avatarUrl,
     alignment,
     isThinking,
+    tabIndex,
     children
 }: ConversationElementProperties) => {
     const Bubble =
@@ -155,7 +157,10 @@ const ConversationElement = ({
                 {avatarUrl && <img src={avatarUrl} alt='' />}
             </ConversationElementAvatar>
 
-            <Bubble {...{isThinking}} tabIndex={isThinking ? undefined : 0}>
+            <Bubble
+                {...{isThinking}}
+                tabIndex={isThinking ? undefined : tabIndex ?? 0}
+            >
                 <ConversationBubbleText>{children}</ConversationBubbleText>
             </Bubble>
         </ConversationElementContainer>
