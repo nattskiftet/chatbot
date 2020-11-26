@@ -1,5 +1,4 @@
 import React, {useCallback} from 'react';
-
 import {BoostConversation, BoostResponse} from '../contexts/session';
 import Obscured from './obscurer';
 import TypingIndicator from './typing-indicator';
@@ -59,61 +58,59 @@ const Response = ({
     }, [onReveal]);
 
     return (
-        <Obscured untilTimestamp={typingRevealTimestamp}>
-            <GroupElement lang={response.language}>
-                <Obscured
-                    untilTimestamp={revealTimestamp}
-                    by={<BotTypingIndicator {...{response}} />}
-                    onReveal={handleReveal}
-                >
-                    {response.elements.map((element, index) => {
-                        let elementTypingRevealTimestamp = 0;
-                        let elementRevealTimestamp = 0;
+        <GroupElement lang={response.language}>
+            <Obscured
+                untilTimestamp={revealTimestamp}
+                by={<BotTypingIndicator {...{response}} />}
+                onReveal={handleReveal}
+            >
+                {response.elements.map((element, index) => {
+                    let elementTypingRevealTimestamp = 0;
+                    let elementRevealTimestamp = 0;
 
-                        if (shouldObscure) {
-                            if (index !== 0) {
-                                elementTypingRevealTimestamp =
-                                    revealTimestamp +
-                                    botResponseRevealDelay * index;
+                    if (shouldObscure) {
+                        if (index !== 0) {
+                            elementTypingRevealTimestamp =
+                                revealTimestamp +
+                                botResponseRevealDelay * index;
 
-                                elementRevealTimestamp =
-                                    element.type === 'links'
-                                        ? 0
-                                        : elementTypingRevealTimestamp +
-                                          botResponseRevealDelayBuffer +
-                                          botResponseRevealDelayBuffer *
-                                              Math.random();
-                            }
+                            elementRevealTimestamp =
+                                element.type === 'links'
+                                    ? 0
+                                    : elementTypingRevealTimestamp +
+                                      botResponseRevealDelayBuffer +
+                                      botResponseRevealDelayBuffer *
+                                          Math.random();
                         }
+                    }
 
-                        return (
+                    return (
+                        <Obscured
+                            // eslint-disable-next-line react/no-array-index-key
+                            key={index}
+                            untilTimestamp={elementTypingRevealTimestamp}
+                        >
                             <Obscured
-                                // eslint-disable-next-line react/no-array-index-key
-                                key={index}
-                                untilTimestamp={elementTypingRevealTimestamp}
+                                untilTimestamp={elementRevealTimestamp}
+                                by={<BotTypingIndicator />}
+                                onReveal={handleReveal}
                             >
-                                <Obscured
-                                    untilTimestamp={elementRevealTimestamp}
-                                    by={<BotTypingIndicator />}
-                                    onReveal={handleReveal}
-                                >
-                                    <ResponseItem
-                                        {...properties}
-                                        {...{
-                                            conversation,
-                                            response,
-                                            responseIndex,
-                                            responsesLength,
-                                            element
-                                        }}
-                                    />
-                                </Obscured>
+                                <ResponseItem
+                                    {...properties}
+                                    {...{
+                                        conversation,
+                                        response,
+                                        responseIndex,
+                                        responsesLength,
+                                        element
+                                    }}
+                                />
                             </Obscured>
-                        );
-                    })}
-                </Obscured>
-            </GroupElement>
-        </Obscured>
+                        </Obscured>
+                    );
+                })}
+            </Obscured>
+        </GroupElement>
     );
 };
 

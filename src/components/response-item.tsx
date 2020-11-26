@@ -73,6 +73,8 @@ const ResponseItem = ({
     );
 
     if (element.type === 'text') {
+        const {text} = element.payload;
+
         if (response.source === 'local') {
             return (
                 <div style={{opacity: 0.7}}>
@@ -80,7 +82,7 @@ const ResponseItem = ({
                         tabIndex={isObscured ? -1 : 0}
                         alignment='right'
                     >
-                        {element.payload.text}
+                        {text}
                     </Conversation>
 
                     <SubtextElement>
@@ -102,7 +104,7 @@ const ResponseItem = ({
                         tabIndex={isObscured ? -1 : 0}
                         alignment='right'
                     >
-                        {element.payload.text}
+                        {text}
                     </Conversation>
 
                     {displaySentIndicator && (
@@ -117,7 +119,7 @@ const ResponseItem = ({
                 tabIndex={isObscured ? -1 : 0}
                 avatarUrl={response.avatar_url}
             >
-                {element.payload.text}
+                {text}
             </Conversation>
         );
     }
