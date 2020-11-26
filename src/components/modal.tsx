@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import {Systemtittel, Normaltekst} from 'nav-frontend-typografi';
 import finishIcon from '../assets/finish.svg';
 
-const ModalContainer = styled.dialog`
+const Element = styled.dialog`
     background: rgba(255, 255, 255, 0.6);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
@@ -31,7 +31,7 @@ const ModalContainer = styled.dialog`
         `}
 `;
 
-const CloseButton = styled.button`
+const ButtonElement = styled.button`
     appearance: none;
     background: #fff;
     cursor: pointer;
@@ -57,7 +57,7 @@ const CloseButton = styled.button`
     }
 `;
 
-const ModalContents = styled.div`
+const ContentsElement = styled.div`
     background: #fff;
     max-height: 100%;
     box-sizing: border-box;
@@ -79,21 +79,21 @@ const ModalContents = styled.div`
         `}
 `;
 
-const ModalTitle = styled(Systemtittel)`
+const TitleElement = styled(Systemtittel)`
     font-size: 20px;
 `;
 
-const ModalHeading = styled(Systemtittel)`
+const HeadingElement = styled(Systemtittel)`
     font-size: 17px;
     margin-top: 4px;
 `;
 
-const ModalText = styled(Normaltekst)`
+const TextElement = styled(Normaltekst)`
     font-size: 17px;
     margin-bottom: 18px;
 `;
 
-const ModalActions = styled.div`
+const ActionsElement = styled.div`
     width: 100%;
     margin-top: 12px;
     display: flex;
@@ -122,13 +122,13 @@ const Modal = ({
     }, [isOpen]);
 
     return (
-        <ModalContainer
+        <Element
             ref={reference as any}
             {...{isOpen}}
             aria-modal={isOpen}
             open={isOpen}
         >
-            <CloseButton
+            <ButtonElement
                 aria-label={ariaLabel}
                 type='button'
                 tabIndex={isOpen ? undefined : -1}
@@ -138,19 +138,17 @@ const Modal = ({
                 onClick={onConfirm}
             />
 
-            <ModalContents {...{isOpen}}>{children}</ModalContents>
-        </ModalContainer>
+            <ContentsElement {...{isOpen}}>{children}</ContentsElement>
+        </Element>
     );
 };
 
 export {
     ModalProperties,
-    ModalTitle,
-    ModalHeading,
-    ModalText,
-    ModalActions,
-    ModalContents,
-    ModalContainer
+    TitleElement,
+    HeadingElement,
+    TextElement,
+    ActionsElement
 };
 
 export default Modal;

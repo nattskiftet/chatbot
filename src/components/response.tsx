@@ -4,7 +4,7 @@ import {BoostConversation, BoostResponse} from '../contexts/session';
 import Obscured from './obscurer';
 import TypingIndicator from './typing-indicator';
 import ResponseElement, {ResponseElementProperties} from './response-element';
-import ConversationElement, {ConversationGroup} from './conversation';
+import Message, {GroupElement} from './message';
 
 import {
     botResponseRevealDelay,
@@ -12,9 +12,9 @@ import {
 } from '../configuration';
 
 const BotTypingIndicator = (properties: {response?: BoostResponse}) => (
-    <ConversationElement isThinking avatarUrl={properties.response?.avatar_url}>
+    <Message isThinking avatarUrl={properties.response?.avatar_url}>
         <TypingIndicator />
-    </ConversationElement>
+    </Message>
 );
 
 interface ResponseProperties
@@ -61,7 +61,7 @@ const Response = ({
 
     return (
         <Obscured untilTimestamp={typingRevealTimestamp}>
-            <ConversationGroup lang={response.language}>
+            <GroupElement lang={response.language}>
                 <Obscured
                     untilTimestamp={revealTimestamp}
                     by={<BotTypingIndicator {...{response}} />}
@@ -113,7 +113,7 @@ const Response = ({
                         );
                     })}
                 </Obscured>
-            </ConversationGroup>
+            </GroupElement>
         </Obscured>
     );
 };

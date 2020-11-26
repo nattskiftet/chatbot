@@ -11,11 +11,7 @@ import Header from './components/header';
 import TypingIndicator from './components/typing-indicator';
 import OpenButton from './components/open-button';
 import StatusStrip from './components/status-strip';
-
-import ConversationElement, {
-    ConversationGroup
-} from './components/conversation';
-
+import Message, {GroupElement} from './components/message';
 import Response from './components/response';
 import FinishModal from './components/finish-modal';
 import EvaluationModal from './components/evaluation-modal';
@@ -29,13 +25,13 @@ import {
     unreadCookieName
 } from './configuration';
 
-interface ContainerProperties {
+interface ContainerElement {
     isFullscreen?: boolean;
     isClosing?: boolean;
     isOpening?: boolean;
 }
 
-const Container = styled.div`
+const ContainerElement = styled.div`
     background-color: #fff;
     width: ${containerWidth};
     height: ${containerHeight};
@@ -54,7 +50,7 @@ const Container = styled.div`
     transform-origin: 100% 100%;
     touch-action: manipulation;
 
-    ${(properties: ContainerProperties) =>
+    ${(properties: ContainerElement) =>
         properties.isFullscreen
             ? `
                 width: 100%;
@@ -69,7 +65,7 @@ const Container = styled.div`
         transform: translate3d(0, 0, 0);
     }
 
-    ${(properties: ContainerProperties) =>
+    ${(properties: ContainerElement) =>
         properties.isClosing || properties.isOpening
             ? `
                 @media screen {
@@ -89,18 +85,18 @@ const Container = styled.div`
             : ''}
 `;
 
-const Padding = styled.div`
+const PaddingElement = styled.div`
     padding: 14px 12px;
     box-sizing: border-box;
 `;
 
-const Strip = styled.div`
+const StatusElement = styled.div`
     &:empty {
         display: none;
     }
 `;
 
-const StatusStripContainer = styled.div`
+const StatusContainerElement = styled.div`
     position: sticky;
     bottom: 10px;
 
@@ -111,35 +107,35 @@ const StatusStripContainer = styled.div`
     }
 `;
 
-const Conversation = styled.div`
+const ConversationElement = styled.div`
     overflow: auto;
     scroll-snap-type: y proximity;
     flex: 1;
     position: relative;
 `;
 
-const ConversationFiller = styled.div`
+const FillerElement = styled.div`
     min-height: ${containerHeight};
 `;
 
-const Anchor = styled.div`
+const AnchorElement = styled.div`
     overflow-anchor: auto;
     scroll-snap-align: start;
 `;
 
-const Form = styled.form`
+const FormElement = styled.form`
     background: #f4f4f4;
     border-top: 1px solid #78706a;
     box-shadow: inset 0 1px 0 #fff;
 `;
 
-const Actions = styled.div`
+const ActionsElement = styled.div`
     margin-top: 10px;
     display: flex;
     flex-direction: row-reverse;
 `;
 
-const RestartKnapp = styled(Knapp)`
+const RestartButtonElement = styled(Knapp)`
     padding: 0 15px;
     margin-right: 10px;
 `;
@@ -383,7 +379,7 @@ const Chat = ({analyticsCallback}: ChatProperties) => {
             />
 
             {isConsideredOpen && (
-                <Container
+                <ContainerElement
                     ref={reference as any}
                     {...{isFullscreen, isClosing, isOpening}}
                 >
@@ -395,12 +391,10 @@ const Chat = ({analyticsCallback}: ChatProperties) => {
                         onFinish={handleFinish}
                     />
 
-                    <Conversation>
-                        <Padding>
+                    <ConversationElement>
+                        <PaddingElement>
                             {(status === 'connecting' ||
-                                status === 'restarting') && (
-                                <ConversationFiller />
-                            )}
+                                status === 'restarting') && <FillerElement />}
 
                             {responses?.map((response, index) => (
                                 <Response
@@ -415,27 +409,27 @@ const Chat = ({analyticsCallback}: ChatProperties) => {
                             ))}
 
                             {isAgentTyping && (
-                                <ConversationGroup>
-                                    <ConversationElement isThinking>
+                                <GroupElement>
+                                    <Message isThinking>
                                         <TypingIndicator />
-                                    </ConversationElement>
-                                </ConversationGroup>
+                                    </Message>
+                                </GroupElement>
                             )}
 
                             {queue && <Response response={queue} />}
 
-                            <StatusStripContainer>
-                                <Strip>
+                            <StatusContainerElement>
+                                <StatusElement>
                                     <StatusStrip />
-                                </Strip>
-                            </StatusStripContainer>
+                                </StatusElement>
+                            </StatusContainerElement>
 
-                            <Anchor ref={anchor as any} />
-                        </Padding>
-                    </Conversation>
+                            <AnchorElement ref={anchor as any} />
+                        </PaddingElement>
+                    </ConversationElement>
 
-                    <Form onSubmit={handleSubmit}>
-                        <Padding>
+                    <FormElement onSubmit={handleSubmit}>
+                        <PaddingElement>
                             <Textarea
                                 aria-label='Din melding'
                                 name='message'
@@ -446,7 +440,7 @@ const Chat = ({analyticsCallback}: ChatProperties) => {
                                 onKeyDown={handleKeyDown}
                             />
 
-                            <Actions>
+                            <ActionsElement>
                                 <Knapp
                                     aria-label='Send melding'
                                     htmlType='submit'
@@ -456,7 +450,7 @@ const Chat = ({analyticsCallback}: ChatProperties) => {
                                 </Knapp>
 
                                 {conversationStatus === 'virtual_agent' && (
-                                    <RestartKnapp
+                                    <RestartButtonElement
                                         mini
                                         aria-label='Start chat på nytt'
                                         htmlType='button'
@@ -465,11 +459,11 @@ const Chat = ({analyticsCallback}: ChatProperties) => {
                                         onClick={handleRestart}
                                     >
                                         Start på nytt
-                                    </RestartKnapp>
+                                    </RestartButtonElement>
                                 )}
-                            </Actions>
-                        </Padding>
-                    </Form>
+                            </ActionsElement>
+                        </PaddingElement>
+                    </FormElement>
 
                     <FinishModal
                         isOpen={isFinishing && !isEvaluating}
@@ -481,7 +475,7 @@ const Chat = ({analyticsCallback}: ChatProperties) => {
                         isOpen={isEvaluating}
                         onConfirm={handleFinish}
                     />
-                </Container>
+                </ContainerElement>
             )}
         </>
     );

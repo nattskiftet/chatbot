@@ -5,7 +5,7 @@ import {Normaltekst} from 'nav-frontend-typografi';
 const avatarSize = '36px';
 const conversationSideWidth = '90%';
 
-const ConversationGroup = styled.div`
+const GroupElement = styled.div`
     margin-top: 10px;
 
     &:first-child {
@@ -13,12 +13,12 @@ const ConversationGroup = styled.div`
     }
 `;
 
-const ConversationElementContainer = styled.div`
+const ContainerElement = styled.div`
     width: 100%;
     display: flex;
 `;
 
-const ConversationElementAvatar = styled.div`
+const AvatarElement = styled.div`
     background-color: #d8d8d8;
     width: ${avatarSize};
     height: ${avatarSize};
@@ -29,7 +29,7 @@ const ConversationElementAvatar = styled.div`
     overflow: hidden;
     visibility: hidden;
 
-    ${ConversationGroup} ${ConversationElementContainer}:first-child & {
+    ${GroupElement} ${ContainerElement}:first-child & {
         visibility: visible;
 
         &:empty {
@@ -54,11 +54,11 @@ const ConversationElementAvatar = styled.div`
     }
 `;
 
-interface ConversationBubbleProperties {
+interface MessageBubbleProperties {
     isThinking?: boolean;
 }
 
-const ConversationBubble = styled.div`
+const MessageBubble = styled.div`
     max-width: ${conversationSideWidth};
     max-width: calc(${conversationSideWidth} - ${avatarSize} - 8px);
     background: #e7e9e9;
@@ -75,7 +75,7 @@ const ConversationBubble = styled.div`
         box-shadow: 0 0 0 3px #005b82;
     }
 
-    ${(properties: ConversationBubbleProperties) =>
+    ${(properties: MessageBubbleProperties) =>
         properties.isThinking
             ? `
                 &:before {
@@ -103,35 +103,35 @@ const ConversationBubble = styled.div`
             : ''}
 `;
 
-const ConversationBubbleLeft = styled(ConversationBubble)`
+const BubbleLeftElement = styled(MessageBubble)`
     margin-top: 3px;
     margin-left: 0;
     border-radius: 4px 18px 18px 4px;
 
-    ${ConversationGroup} ${ConversationElementContainer}:first-child & {
+    ${GroupElement} ${ContainerElement}:first-child & {
         margin-top: 0;
         border-radius: 18px 18px 18px 4px;
     }
 
-    ${ConversationGroup} ${ConversationElementContainer}:last-child & {
+    ${GroupElement} ${ContainerElement}:last-child & {
         border-radius: 4px 18px 18px 18px;
     }
 
-    ${ConversationGroup} ${ConversationElementContainer}:first-child:last-child & {
+    ${GroupElement} ${ContainerElement}:first-child:last-child & {
         border-radius: 18px 18px 18px 18px;
     }
 `;
 
-const ConversationBubbleRight = styled(ConversationBubble)`
+const BubbleRightElement = styled(MessageBubble)`
     background-color: #e0f5fb;
     margin-top: 3px;
     margin-right: 0;
     border-radius: 18px 18px 18px 18px;
 `;
 
-const ConversationBubbleText = styled(Normaltekst)``;
+const TextElement = styled(Normaltekst)``;
 
-interface ConversationElementProperties {
+interface MessageProperties {
     avatarUrl?: string;
     alignment?: 'left' | 'right';
     isThinking?: boolean;
@@ -139,42 +139,40 @@ interface ConversationElementProperties {
     children?: React.ReactNode;
 }
 
-const ConversationElement = ({
+const Message = ({
     avatarUrl,
     alignment,
     isThinking,
     tabIndex,
     children,
     ...properties
-}: ConversationElementProperties) => {
+}: MessageProperties) => {
     const label = alignment === 'right' ? 'Du sier:' : 'NAV sier:';
-    const Bubble =
-        alignment === 'right'
-            ? ConversationBubbleRight
-            : ConversationBubbleLeft;
+    const BubbleElement =
+        alignment === 'right' ? BubbleRightElement : BubbleLeftElement;
 
     return (
-        <ConversationElementContainer {...properties}>
-            <ConversationElementAvatar aria-label={label}>
+        <ContainerElement {...properties}>
+            <AvatarElement aria-label={label}>
                 {avatarUrl && <img src={avatarUrl} alt='' />}
-            </ConversationElementAvatar>
+            </AvatarElement>
 
-            <Bubble
+            <BubbleElement
                 {...{isThinking}}
                 tabIndex={isThinking ? undefined : tabIndex ?? 0}
             >
-                <ConversationBubbleText>{children}</ConversationBubbleText>
-            </Bubble>
-        </ConversationElementContainer>
+                <TextElement>{children}</TextElement>
+            </BubbleElement>
+        </ContainerElement>
     );
 };
 
 export {
     avatarSize,
     conversationSideWidth,
-    ConversationGroup,
-    ConversationElementContainer,
-    ConversationElementAvatar
+    GroupElement,
+    ContainerElement,
+    AvatarElement
 };
 
-export default ConversationElement;
+export default Message;

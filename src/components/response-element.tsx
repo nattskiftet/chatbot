@@ -7,7 +7,7 @@ import {Ingress, Normaltekst, Undertekst} from 'nav-frontend-typografi';
 import idPortenIcon from '../assets/id-porten.svg';
 import {BoostResponse, BoostResponseElement} from '../contexts/session';
 import Spinner from './spinner';
-import ConversationElement, {ConversationGroup} from './conversation';
+import Conversation, {GroupElement} from './message';
 
 import ResponseElementLink, {
     ResponseElementLinkProperties
@@ -31,7 +31,7 @@ const LinkPanel = styled(LenkepanelBase)`
     margin-top: 15px;
     margin-bottom: 15px;
 
-    ${ConversationGroup}:nth-last-child(3) & {
+    ${GroupElement}:nth-last-child(3) & {
         margin-bottom: 0;
     }
 `;
@@ -83,12 +83,12 @@ const ResponseElement = ({
         if (response.source === 'local') {
             return (
                 <div style={{opacity: 0.7}}>
-                    <ConversationElement
+                    <Conversation
                         tabIndex={isObscured ? -1 : 0}
                         alignment='right'
                     >
                         {element.payload.text}
-                    </ConversationElement>
+                    </Conversation>
 
                     <ConversationBubbleSubtext>
                         Sender... <Spinner />
@@ -105,12 +105,12 @@ const ResponseElement = ({
 
             return (
                 <>
-                    <ConversationElement
+                    <Conversation
                         tabIndex={isObscured ? -1 : 0}
                         alignment='right'
                     >
                         {element.payload.text}
-                    </ConversationElement>
+                    </Conversation>
 
                     {displaySentIndicator && (
                         <ConversationBubbleSubtext>
@@ -122,12 +122,12 @@ const ResponseElement = ({
         }
 
         return (
-            <ConversationElement
+            <Conversation
                 tabIndex={isObscured ? -1 : 0}
                 avatarUrl={response.avatar_url}
             >
                 {element.payload.text}
-            </ConversationElement>
+            </Conversation>
         );
     }
 
@@ -161,14 +161,14 @@ const ResponseElement = ({
         }
 
         return (
-            <ConversationElement
+            <Conversation
                 tabIndex={isObscured ? -1 : 0}
                 avatarUrl={response.avatar_url}
             >
                 <ConversationBubbleContents
                     dangerouslySetInnerHTML={{__html: html}}
                 />
-            </ConversationElement>
+            </Conversation>
         );
     }
 

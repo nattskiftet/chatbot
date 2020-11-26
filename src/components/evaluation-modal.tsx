@@ -3,14 +3,19 @@ import styled from 'styled-components';
 import {Textarea, RadioGruppe, Radio} from 'nav-frontend-skjema';
 import {Knapp} from 'nav-frontend-knapper';
 import useSession from '../contexts/session';
-import Modal, {ModalProperties, ModalTitle, ModalText} from './modal';
 
-const EvaluationModalActions = styled.div`
+import Modal, {
+    ModalProperties,
+    TitleElement,
+    TextElement
+} from './modal';
+
+const ActionsElement = styled.div`
     margin-top: 20px;
     display: flex;
 `;
 
-const EvaluationModalSpacer = styled.div`
+const ActionsSpacerElement = styled.div`
     flex: 1;
 `;
 
@@ -55,11 +60,11 @@ const EvaluationModal = ({
         >
             {isOpen && (
                 <form onSubmit={handleSubmit}>
-                    <ModalTitle>Chatten er avsluttet.</ModalTitle>
-                    <ModalText>
+                    <TitleElement>Chatten er avsluttet.</TitleElement>
+                    <TextElement>
                         Hvis du har tid, ønsker vi gjerne å lære av opplevelsen
                         din.
-                    </ModalText>
+                    </TextElement>
 
                     <RadioGruppe legend='Fikk du svar på det du lurte på?'>
                         <Radio
@@ -86,12 +91,12 @@ const EvaluationModal = ({
                         onChange={handleMessageChange}
                     />
 
-                    <EvaluationModalActions>
-                        <EvaluationModalSpacer />
+                    <ActionsElement>
+                        <ActionsSpacerElement />
                         <Knapp kompakt mini htmlType='submit'>
                             Send inn
                         </Knapp>
-                    </EvaluationModalActions>
+                    </ActionsElement>
                 </form>
             )}
         </Modal>

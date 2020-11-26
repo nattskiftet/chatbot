@@ -7,11 +7,11 @@ import useSession from '../contexts/session';
 const openButtonAvatarSizeNumber = 60;
 const openButtonAvatarSize = `${openButtonAvatarSizeNumber}px`;
 
-interface ButtonProperties {
+interface ButtonElementProperties {
     isVisible?: boolean;
 }
 
-const Button = styled.button`
+const ButtonElement = styled.button`
     appearance: none;
     background: #fff;
     margin-right: ${openButtonAvatarSizeNumber / 2}px;
@@ -23,17 +23,17 @@ const Button = styled.button`
     border: 0;
     cursor: pointer;
     border-radius: 30px;
-    transform: ${(properties: ButtonProperties) =>
+    transform: ${(properties: ButtonElementProperties) =>
         properties.isVisible
             ? 'scale(1)'
             : `scale(0.8) translate3d(0,${
                   openButtonAvatarSizeNumber * 2
               }px,0)`};
 
-    opacity: ${(properties: ButtonProperties) =>
+    opacity: ${(properties: ButtonElementProperties) =>
         properties.isVisible ? '1' : '0'};
 
-    transition: ${(properties: ButtonProperties) =>
+    transition: ${(properties: ButtonElementProperties) =>
         properties.isVisible
             ? 'transform 0.5s, opacity 0.2s 0.3s'
             : 'transform 0.2s, opacity 0.1s'};
@@ -55,17 +55,17 @@ const Button = styled.button`
     }
 `;
 
-const ButtonText = styled(Normaltekst)`
+const TextElement = styled(Normaltekst)`
     padding-right: ${openButtonAvatarSizeNumber / 2 - 4}px;
     display: inline-block;
     vertical-align: top;
 
-    ${Button}:focus &, ${Button}:hover & {
+    ${ButtonElement}:focus &, ${ButtonElement}:hover & {
         color: #fff;
     }
 `;
 
-const ButtonAvatar = styled.div`
+const AvatarElement = styled.div`
     width: ${openButtonAvatarSize};
     height: ${openButtonAvatarSize};
     position: absolute;
@@ -76,7 +76,7 @@ const ButtonAvatar = styled.div`
     display: inline-block;
     vertical-align: top;
 
-    ${Button}:hover & {
+    ${ButtonElement}:hover & {
         transform: translateY(-50%) scale(1.1);
     }
 
@@ -98,14 +98,14 @@ const ButtonAvatar = styled.div`
         border-radius: ${openButtonAvatarSize};
     }
 
-    ${Button}:focus &:before {
+    ${ButtonElement}:focus &:before {
         box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.3),
             0 0 0 2px rgba(255, 255, 255, 1), 0 1px 4px rgba(0, 0, 0, 0.6),
             0 4px 10px rgba(0, 0, 0, 0.3), 0 0 0 4px #005b82;
     }
 `;
 
-const ButtonUnreadCount = styled(Undertekst)`
+const UnreadCountElement = styled(Undertekst)`
     background: #c30000;
     width: 21px;
     height: 21px;
@@ -152,29 +152,28 @@ const OpenButton = ({
     }
 
     return (
-        <Button
+        <ButtonElement
             type='button'
             aria-label={openButtonLabel}
             isVisible={!isOpen && !isOpening}
             tabIndex={isOpen ? -1 : 0}
             {...{onClick}}
         >
-            <ButtonText>{openButtonLabelPrefix}</ButtonText>
+            <TextElement>{openButtonLabelPrefix}</TextElement>
 
-            <ButtonAvatar
+            <AvatarElement
                 dangerouslySetInnerHTML={{
                     __html: fridaIcon
                 }}
             />
 
-            <ButtonUnreadCount>
+            <UnreadCountElement>
                 {unreadCount > 0
                     ? `${unreadCount > 9 ? '9' : unreadCount}`
                     : ''}
-            </ButtonUnreadCount>
-        </Button>
+            </UnreadCountElement>
+        </ButtonElement>
     );
 };
 
-export {ButtonProperties, ButtonAvatar, ButtonText};
 export default OpenButton;

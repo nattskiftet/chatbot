@@ -2,12 +2,12 @@ import React, {createContext, useContext, useState, useEffect} from 'react';
 import cookies from 'js-cookie';
 import {cookieDomain, languageCookieName} from '../configuration';
 
-interface Language {
+interface LanguageInterface {
     language?: string;
     setLanguage?: (language: string) => void;
 }
 
-const LanguageContext = createContext<Language>({});
+const LanguageContext = createContext<LanguageInterface>({});
 
 const LanguageProvider = (properties: Record<string, unknown>) => {
     const [language, setLanguage] = useState<string | undefined>(() =>

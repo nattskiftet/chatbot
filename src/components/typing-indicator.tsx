@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 
-const TypingIndicatorDot = styled.span`
+const DotElement = styled.span`
     background: rgba(0, 0, 0, 0.4);
     width: 8px;
     height: 8px;
@@ -43,12 +43,11 @@ const TypingIndicatorDot = styled.span`
 const TypingIndicator = () => {
     return (
         <span>
-            <TypingIndicatorDot />
-            <TypingIndicatorDot />
-            <TypingIndicatorDot />
+            <DotElement />
+            <DotElement />
+            <DotElement />
         </span>
     );
 };
 
-export {TypingIndicatorDot};
 export default TypingIndicator;

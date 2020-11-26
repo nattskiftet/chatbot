@@ -2,13 +2,13 @@ import React from 'react';
 import styled from 'styled-components';
 import AlertStripe from 'nav-frontend-alertstriper';
 import useSession from '../contexts/session';
-import Spinner, {SpinnerContainer} from './spinner';
+import Spinner, {SpinnerElement} from './spinner';
 
-const AlertStrip = styled(AlertStripe)`
+const Element = styled(AlertStripe)`
     backdrop-filter: blur(2px);
     box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
 
-    ${SpinnerContainer} {
+    ${SpinnerElement} {
         position: relative;
         top: -3px;
 
@@ -22,11 +22,11 @@ const AlertStrip = styled(AlertStripe)`
     }
 `;
 
-const AlertStripContainer = styled.div`
+const ContentsElement = styled.div`
     display: flex;
 `;
 
-const AlertStripText = styled.span`
+const TextElement = styled.span`
     flex: 1;
 `;
 
@@ -37,57 +37,55 @@ const StatusStrip = () => {
     switch (status) {
         case 'connecting': {
             return (
-                <AlertStrip type='info'>
-                    <AlertStripContainer>
-                        <AlertStripText>Kobler til...</AlertStripText>
+                <Element type='info'>
+                    <ContentsElement>
+                        <TextElement>Kobler til...</TextElement>
                         <Spinner />
-                    </AlertStripContainer>
-                </AlertStrip>
+                    </ContentsElement>
+                </Element>
             );
         }
 
         case 'restarting': {
             return (
-                <AlertStrip type='advarsel'>
-                    <AlertStripContainer>
-                        <AlertStripText>Starter på nytt...</AlertStripText>
+                <Element type='advarsel'>
+                    <ContentsElement>
+                        <TextElement>Starter på nytt...</TextElement>
                         <Spinner />
-                    </AlertStripContainer>
-                </AlertStrip>
+                    </ContentsElement>
+                </Element>
             );
         }
 
         case 'ended': {
-            return (
-                <AlertStrip type='suksess'>Samtalen er avsluttet.</AlertStrip>
-            );
+            return <Element type='suksess'>Samtalen er avsluttet.</Element>;
         }
 
         case 'error': {
             if (error?.code === 'network_error') {
                 return (
-                    <AlertStrip type='feil'>
+                    <Element type='feil'>
                         Vi får ikke kontakt. Vennligst sjekk
                         internettilkoblingen din og prøv igjen.
-                    </AlertStrip>
+                    </Element>
                 );
             }
 
-            return <AlertStrip type='feil'>Det har skjedd en feil.</AlertStrip>;
+            return <Element type='feil'>Det har skjedd en feil.</Element>;
         }
 
         default: {
             if (conversationStatus === 'in_human_chat_queue') {
                 return (
-                    <AlertStrip type='info'>
-                        <AlertStripContainer>
-                            <AlertStripText>
+                    <Element type='info'>
+                        <ContentsElement>
+                            <TextElement>
                                 Venter på ledig kundebehandler...
-                            </AlertStripText>
+                            </TextElement>
 
                             <Spinner />
-                        </AlertStripContainer>
-                    </AlertStrip>
+                        </ContentsElement>
+                    </Element>
                 );
             }
 

@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import NavFrontendSpinner from 'nav-frontend-spinner';
 
-const SpinnerContainer = styled.span`
+const SpinnerElement = styled.span`
     width: 0.8em;
     height: 0.8em;
     margin: auto;
@@ -17,10 +17,10 @@ const SpinnerContainer = styled.span`
 `;
 
 const Spinner = () => (
-    <SpinnerContainer>
+    <SpinnerElement>
         <NavFrontendSpinner />
-    </SpinnerContainer>
+    </SpinnerElement>
 );
 
-export {SpinnerContainer};
+export {SpinnerElement};
 export default Spinner;

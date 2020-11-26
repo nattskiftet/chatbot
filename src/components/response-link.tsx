@@ -9,15 +9,15 @@ import {
     BoostResponseElementLinksItem
 } from '../contexts/session';
 
-import ConversationElement, {
+import Message, {
     avatarSize,
     conversationSideWidth,
-    ConversationElementContainer,
-    ConversationElementAvatar
-} from './conversation';
+    ContainerElement,
+    AvatarElement
+} from './message';
 
 import {linkDisableTimeout} from '../configuration';
-import Spinner, {SpinnerContainer} from './spinner';
+import Spinner, {SpinnerElement} from './spinner';
 
 const ResponseElementLinkButton = styled(RadioPanelGruppe)`
     max-width: ${conversationSideWidth};
@@ -25,7 +25,7 @@ const ResponseElementLinkButton = styled(RadioPanelGruppe)`
     margin-top: 3px;
     position: relative;
 
-    ${SpinnerContainer} {
+    ${SpinnerElement} {
         transform: translate(0.5px, 0.5px);
         position: absolute;
         top: 19px;
@@ -94,17 +94,17 @@ const ResponseElementLink = ({
 
     if (link.url && link.type === 'external_link') {
         return (
-            <ConversationElement tabIndex={-1} avatarUrl={response.avatar_url}>
+            <Message tabIndex={-1} avatarUrl={response.avatar_url}>
                 <a href={link.url} {...{tabIndex}}>
                     {link.text}
                 </a>
-            </ConversationElement>
+            </Message>
         );
     }
 
     return (
-        <ConversationElementContainer onKeyPress={handleKeyPress}>
-            <ConversationElementAvatar />
+        <ContainerElement onKeyPress={handleKeyPress}>
+            <AvatarElement />
             <ResponseElementLinkButton
                 name={link.text}
                 radios={[
@@ -123,7 +123,7 @@ const ResponseElementLink = ({
                 checked={isSelected || isLoading ? link.text : undefined}
                 onChange={handleAction}
             />
-        </ConversationElementContainer>
+        </ContainerElement>
     );
 };
 

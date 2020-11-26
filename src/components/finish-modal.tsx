@@ -1,9 +1,14 @@
 import React from 'react';
 import styled from 'styled-components';
 import {Knapp} from 'nav-frontend-knapper';
-import Modal, {ModalProperties, ModalText, ModalActions} from './modal';
 
-const ModalButton = styled(Knapp)`
+import Modal, {
+    ModalProperties,
+    TextElement,
+    ActionsElement
+} from './modal';
+
+const ButtonElement = styled(Knapp)`
     margin-left: 5px;
 `;
 
@@ -22,10 +27,12 @@ const FinishModal = ({
         {...{isOpen, onConfirm}}
         {...properties}
     >
-        <ModalText>Er du sikker på at du vil avslutte samtalen?</ModalText>
+        <TextElement>
+            Er du sikker på at du vil avslutte samtalen?
+        </TextElement>
 
-        <ModalActions>
-            <ModalButton
+        <ActionsElement>
+            <ButtonElement
                 mini
                 kompakt
                 tabIndex={isOpen ? undefined : -1}
@@ -35,9 +42,9 @@ const FinishModal = ({
                 onClick={onCancel}
             >
                 Avbryt
-            </ModalButton>
+            </ButtonElement>
 
-            <ModalButton
+            <ButtonElement
                 mini
                 kompakt
                 tabIndex={isOpen ? undefined : -1}
@@ -47,8 +54,8 @@ const FinishModal = ({
                 onClick={onConfirm}
             >
                 Ja, avslutt
-            </ModalButton>
-        </ModalActions>
+            </ButtonElement>
+        </ActionsElement>
     </Modal>
 );
 
