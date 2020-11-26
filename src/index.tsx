@@ -1,17 +1,13 @@
 import React, {useRef, useState, useEffect, useCallback} from 'react';
 import styled from 'styled-components';
 import cookies from 'js-cookie';
-import {Innholdstittel} from 'nav-frontend-typografi';
 import {Textarea} from 'nav-frontend-skjema';
 import {Knapp} from 'nav-frontend-knapper';
-import finishIcon from './assets/finish.svg';
-import minimizeIcon from './assets/minimize.svg';
-import fullscreenIcon from './assets/maximize.svg';
-import contractIcon from './assets/contract.svg';
 import delay from './utilities/delay';
 import {LanguageProvider} from './contexts/language';
 import useSession, {SessionProvider} from './contexts/session';
 import useDebouncedEffect from './hooks/use-debounced-effect';
+import Header from './components/header';
 import TypingIndicator from './components/typing-indicator';
 import OpenButton from './components/open-button';
 import StatusStrip from './components/status-strip';
@@ -96,76 +92,6 @@ const Container = styled.div`
 const Padding = styled.div`
     padding: 14px 12px;
     box-sizing: border-box;
-`;
-
-const Tittel = styled(Innholdstittel)`
-    font-size: 22px;
-`;
-
-interface HeaderProperties {
-    isHuman?: boolean;
-}
-
-const Header = styled.div`
-    background: #fff;
-    border-bottom: 1px solid #78706a;
-    box-shadow: inset 0 -1px 0 #fff, 0 1px 4px rgba(0, 0, 0, 0.15),
-        0 2px 5px rgba(0, 0, 0, 0.1);
-    position: relative;
-    z-index: 1;
-    border-radius: 2px 2px 0 0;
-    padding: 2px 0;
-    display: flex;
-    transition: background-color 0.37s;
-
-    ${(properties: HeaderProperties) =>
-        properties.isHuman
-            ? `
-                background-color: #C6C2BF;
-                box-shadow:
-                    inset 0 -1px 0 rgba(255,255,255,0.3),
-                    0 1px 4px rgba(0, 0, 0, 0.15),
-                    0 2px 5px rgba(0, 0, 0, 0.1);
-            `
-            : ''}
-
-    ${Tittel} {
-        margin: auto;
-        margin-left: 0;
-        padding-left: 12px;
-    }
-`;
-
-const HeaderActions = styled.div`
-    margin: auto;
-    margin-right: 0;
-`;
-
-const IconButton = styled.button`
-    appearance: none;
-    background: none;
-    cursor: pointer;
-    width: 48px;
-    height: 48px;
-    padding: 14px;
-    border: 0;
-
-    svg {
-        width: 100%;
-        height: 100%;
-    }
-
-    &:focus {
-        outline: none;
-        box-shadow: inset 0 0 0 3px #005b82;
-        border-radius: 7px;
-    }
-`;
-
-const FullscreenIconButton = styled(IconButton)`
-    @media ${fullscreenMediaQuery} {
-        display: none;
-    }
 `;
 
 const Strip = styled.div`
@@ -447,7 +373,6 @@ const Chat = ({analyticsCallback}: ChatProperties) => {
     );
 
     const isConsideredOpen = isOpen || isOpening;
-    const isHuman = conversationStatus === 'assigned_to_human';
     const isModalOpen = isFinishing || isEvaluating;
 
     return (
@@ -462,57 +387,13 @@ const Chat = ({analyticsCallback}: ChatProperties) => {
                     ref={reference as any}
                     {...{isFullscreen, isClosing, isOpening}}
                 >
-                    <Header {...{isHuman}}>
-                        {isHuman ? (
-                            <Tittel>Chat med NAV</Tittel>
-                        ) : (
-                            <Tittel>Chatbot Frida</Tittel>
-                        )}
-
-                        <HeaderActions>
-                            <IconButton
-                                aria-label='Minimer chatvindu'
-                                type='button'
-                                tabIndex={isModalOpen ? -1 : 0}
-                                dangerouslySetInnerHTML={{
-                                    __html: minimizeIcon
-                                }}
-                                onClick={handleClose}
-                            />
-
-                            {isFullscreen ? (
-                                <FullscreenIconButton
-                                    aria-label='Bruk mindre chatvindu'
-                                    type='button'
-                                    tabIndex={isModalOpen ? -1 : 0}
-                                    dangerouslySetInnerHTML={{
-                                        __html: contractIcon
-                                    }}
-                                    onClick={toggleFullscreen}
-                                />
-                            ) : (
-                                <FullscreenIconButton
-                                    aria-label='Åpne chat i fullskjerm'
-                                    type='button'
-                                    tabIndex={isModalOpen ? -1 : 0}
-                                    dangerouslySetInnerHTML={{
-                                        __html: fullscreenIcon
-                                    }}
-                                    onClick={toggleFullscreen}
-                                />
-                            )}
-
-                            <IconButton
-                                aria-label='Avslutt chat'
-                                type='button'
-                                tabIndex={isModalOpen ? -1 : 0}
-                                dangerouslySetInnerHTML={{
-                                    __html: finishIcon
-                                }}
-                                onClick={handleFinish}
-                            />
-                        </HeaderActions>
-                    </Header>
+                    <Header
+                        {...{isFullscreen}}
+                        isObscured={isModalOpen}
+                        onClose={handleClose}
+                        onToggleFullscreen={toggleFullscreen}
+                        onFinish={handleFinish}
+                    />
 
                     <Conversation>
                         <Padding>
