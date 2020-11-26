@@ -144,17 +144,19 @@ const ConversationElement = ({
     alignment,
     isThinking,
     tabIndex,
-    children
+    children,
+    ...properties
 }: ConversationElementProperties) => {
+    const label = alignment === 'right' ? 'Du sier:' : 'NAV sier:';
     const Bubble =
         alignment === 'right'
             ? ConversationBubbleRight
             : ConversationBubbleLeft;
 
     return (
-        <ConversationElementContainer>
-            <ConversationElementAvatar>
-                {avatarUrl && <img src={avatarUrl} alt='NAV' />}
+        <ConversationElementContainer {...properties}>
+            <ConversationElementAvatar aria-label={label}>
+                {avatarUrl && <img src={avatarUrl} alt='' />}
             </ConversationElementAvatar>
 
             <Bubble
