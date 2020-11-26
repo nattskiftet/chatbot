@@ -2,6 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import {Normaltekst, Undertekst} from 'nav-frontend-typografi';
 import fridaIcon from '../assets/frida.svg';
+import useSession from '../contexts/session';
 
 const openButtonAvatarSizeNumber = 60;
 const openButtonAvatarSize = `${openButtonAvatarSizeNumber}px`;
@@ -138,6 +139,7 @@ const OpenButton = ({
     unreadCount,
     onClick
 }: OpenButtonProperties) => {
+    const {status} = useSession();
     const openButtonLabelPrefix =
         status === 'connected' ? 'Åpne chat' : 'Chat med oss';
     let openButtonLabel = openButtonLabelPrefix;

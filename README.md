@@ -7,19 +7,13 @@ Chatbot'en kan aktiveres i appene via et parameter til dekoratøren. Se dekorat�
 Komponenten fra NPM-pakka skal ikke benyttes i apper som også benytter Nav-dekoratøren, da dette vil komme i konflikt med dekoratørens chatbot-instans.
 
 ## Installasjon
-Apper uten Nav-dekoratøren kan ta i bruk Chatbot med NPM-pakka. 
+Apper uten Nav-dekoratøren kan ta i bruk Chatbot med NPM-pakka.
 ```sh
 npm i @navikt/nav-chatbot
 ```
 ```javascript
 import NAVChatBot from '@navikt/nav-chatbot';
-
-<NAVChatBot
-    customerKey='xxxx'                      // Nødvendig config-felt
-    queueKey='XXXX'                         // Nødvendig config-felt
-    configId='xxxx-xxxx-xxxx-xxxx-xxxx'     // Nødvendig config-felt
-    label=''                                // Setter tekst på Frida-ikonet (optional)
-/>
+<NAVChatBot/>
 ```
 
 ## Typescript

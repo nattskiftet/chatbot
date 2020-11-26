@@ -13,7 +13,7 @@ const Demo = () => (
             `}
         </style>
 
-        <Chat />
+        <Chat analyticsCallback={console.log} />
     </div>
 );
 

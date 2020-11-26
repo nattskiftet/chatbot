@@ -1,11 +1,8 @@
 const cookieDomain =
     window.location.hostname === 'localhost' ? undefined : '.nav.no';
 
-let internalClientLanguage = window.navigator.language;
-
-if (internalClientLanguage.startsWith('en-')) {
-    internalClientLanguage = 'en-US';
-}
+const internalClientLanguage = 'nb-NO';
+// Const internalClientLanguage = window.navigator.language;
 
 const clientLanguage = internalClientLanguage;
 const apiUrlBase = 'https://navtest.boost.ai/api/chat/v2';
@@ -22,6 +19,7 @@ const botResponseRevealDelay = 1250;
 const botResponseRevealDelayBuffer = botResponseRevealDelay / 2;
 const minimumPollTimeout = 1000;
 const maximumPollTimeout = 2500;
+const authenticationPrefix = 'Init:Auth:';
 
 const fullscreenMediaQuery = `(max-width: ${
     containerWidthNumber + 100
@@ -44,5 +42,6 @@ export {
     botResponseRevealDelayBuffer,
     minimumPollTimeout,
     maximumPollTimeout,
+    authenticationPrefix,
     fullscreenMediaQuery
 };

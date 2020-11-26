@@ -154,7 +154,7 @@ const ConversationElement = ({
     return (
         <ConversationElementContainer>
             <ConversationElementAvatar>
-                {avatarUrl && <img src={avatarUrl} alt='' />}
+                {avatarUrl && <img src={avatarUrl} alt='NAV' />}
             </ConversationElementAvatar>
 
             <Bubble

@@ -1,64 +1,33 @@
-import React, {useRef, useState, useMemo, useEffect, useCallback} from 'react';
-
+import React, {useRef, useState, useEffect, useCallback} from 'react';
 import styled from 'styled-components';
 import cookies from 'js-cookie';
-
-import {
-    Innholdstittel,
-    Ingress,
-    Normaltekst,
-    Undertekst
-} from 'nav-frontend-typografi';
-
-import {Textarea, RadioPanelGruppe} from 'nav-frontend-skjema';
+import {Innholdstittel} from 'nav-frontend-typografi';
+import {Textarea} from 'nav-frontend-skjema';
 import {Knapp} from 'nav-frontend-knapper';
-import {LenkepanelBase} from 'nav-frontend-lenkepanel';
-
 import finishIcon from './assets/finish.svg';
 import minimizeIcon from './assets/minimize.svg';
 import fullscreenIcon from './assets/maximize.svg';
 import contractIcon from './assets/contract.svg';
-import idPortenIcon from './assets/id-porten.svg';
-
 import delay from './utilities/delay';
-
 import {LanguageProvider} from './contexts/language';
-
-import useSession, {
-    BoostConversation,
-    BoostResponse,
-    BoostResponseElement,
-    BoostResponseElementLinksItem,
-    Session,
-    SessionProvider
-} from './contexts/session';
-
-import useLoader from './hooks/use-loader';
+import useSession, {SessionProvider} from './contexts/session';
 import useDebouncedEffect from './hooks/use-debounced-effect';
-
 import TypingIndicator from './components/typing-indicator';
-import Obscured from './components/obscurer';
 import OpenButton from './components/open-button';
-import Spinner, {SpinnerContainer} from './components/spinner';
 import StatusStrip from './components/status-strip';
 
 import ConversationElement, {
-    avatarSize,
-    conversationSideWidth,
-    ConversationGroup,
-    ConversationElementContainer,
-    ConversationElementAvatar
+    ConversationGroup
 } from './components/conversation';
 
-import Modal, {ModalText, ModalActions} from './components/modal';
+import Response from './components/response';
+import FinishModal from './components/finish-modal';
+import EvaluationModal from './components/evaluation-modal';
 
 import {
     containerWidth,
     containerHeight,
     fullscreenMediaQuery,
-    botResponseRevealDelay,
-    botResponseRevealDelayBuffer,
-    linkDisableTimeout,
     cookieDomain,
     openCookieName,
     unreadCookieName
@@ -223,65 +192,8 @@ const Conversation = styled.div`
     position: relative;
 `;
 
-const ConversationBubbleContents = styled.span`
-    p {
-        margin: 0;
-        padding: 0;
-    }
-`;
-
 const ConversationFiller = styled.div`
     min-height: ${containerHeight};
-`;
-
-const ConversationBubbleSubtext = styled(Undertekst)`
-    text-align: right;
-    color: #444;
-`;
-
-const ConversationButton = styled(RadioPanelGruppe)`
-    max-width: ${conversationSideWidth};
-    max-width: calc(${conversationSideWidth} - ${avatarSize} - 8px);
-    margin-top: 3px;
-    position: relative;
-
-    ${SpinnerContainer} {
-        transform: translate(0.5px, 0.5px);
-        position: absolute;
-        top: 19px;
-        left: 19px;
-
-        svg circle {
-            stroke: rgba(255, 255, 255, 0.1);
-        }
-
-        svg circle:last-child {
-            stroke: rgba(255, 255, 255, 1);
-        }
-    }
-`;
-
-const LinkPanel = styled(LenkepanelBase)`
-    margin-top: 15px;
-    margin-bottom: 15px;
-
-    ${ConversationGroup}:nth-last-child(3) & {
-        margin-bottom: 0;
-    }
-`;
-
-const LinkPanelIcon = styled.div`
-    background: #d0d2cf;
-    width: 36px;
-    height: 36px;
-    margin-left: 5px;
-    fill: #2d3033;
-    border-radius: 2px;
-`;
-
-const LinkPanelText = styled.div`
-    margin-left: 20px;
-    flex: 1;
 `;
 
 const Anchor = styled.div`
@@ -306,347 +218,11 @@ const RestartKnapp = styled(Knapp)`
     margin-right: 10px;
 `;
 
-const ModalKnapp = styled(Knapp)`
-    margin-left: 5px;
-`;
-
-interface ResponseElementLinkProperties {
-    response: BoostResponse;
-    link: BoostResponseElementLinksItem;
-    tabIndex?: number;
-    onAction?: Session['sendAction'];
+interface ChatProperties {
+    analyticsCallback?: () => void;
 }
 
-const ResponseElementLink = ({
-    response,
-    link,
-    tabIndex,
-    onAction
-}: ResponseElementLinkProperties) => {
-    const [isSelected, setIsSelected] = useState(false);
-    const [isDisabled, setIsDisabled] = useState(false);
-    const [isLoading, setIsLoading] = useLoader();
-
-    const handleAction = useCallback(async () => {
-        if (!isLoading && onAction) {
-            const finishLoading = setIsLoading();
-            await onAction(link.id);
-            finishLoading();
-
-            setIsSelected(true);
-            setIsDisabled(true);
-        }
-    }, [link.id, isLoading, onAction, setIsLoading]);
-
-    const handleKeyPress = useCallback(
-        (event) => {
-            if (event.key.toLowerCase() === 'enter') {
-                void handleAction();
-            }
-        },
-        [handleAction]
-    );
-
-    useEffect(() => {
-        if (isDisabled) {
-            const timeout = setTimeout(() => {
-                setIsDisabled(false);
-            }, linkDisableTimeout);
-
-            return () => {
-                clearTimeout(timeout);
-            };
-        }
-
-        return undefined;
-    }, [isDisabled]);
-
-    if (link.url && link.type === 'external_link') {
-        return (
-            <ConversationElement tabIndex={-1} avatarUrl={response.avatar_url}>
-                <a href={link.url} {...{tabIndex}}>
-                    {link.text}
-                </a>
-            </ConversationElement>
-        );
-    }
-
-    return (
-        <ConversationElementContainer onKeyPress={handleKeyPress}>
-            <ConversationElementAvatar />
-            <ConversationButton
-                name={link.text}
-                radios={[
-                    {
-                        id: link.text,
-                        value: link.text,
-                        disabled: tabIndex === -1,
-                        label: (
-                            <>
-                                {isLoading && <Spinner />}
-                                {link.text}
-                            </>
-                        )
-                    }
-                ]}
-                checked={isSelected || isLoading ? link.text : undefined}
-                onChange={handleAction}
-            />
-        </ConversationElementContainer>
-    );
-};
-
-interface ResponseElementProperties
-    extends Omit<ResponseElementLinkProperties, 'link'> {
-    responseIndex?: number;
-    element: BoostResponseElement;
-    responses?: BoostResponse[];
-    responsesLength?: number;
-    isObscured?: boolean;
-}
-
-const ResponseElement = ({
-    response,
-    responseIndex,
-    element,
-    responses,
-    responsesLength,
-    isObscured,
-    ...properties
-}: ResponseElementProperties) => {
-    const mostRecentClientMessageIndex = useMemo(
-        () =>
-            (responsesLength ?? 0) -
-            (responses
-                ?.slice()
-                .reverse()
-                .findIndex((response) => response.source === 'client') ?? 0) -
-            1,
-        [responses, responsesLength]
-    );
-
-    if (element.type === 'text') {
-        if (response.source === 'local') {
-            return (
-                <div style={{opacity: 0.7}}>
-                    <ConversationElement
-                        tabIndex={isObscured ? -1 : 0}
-                        alignment='right'
-                    >
-                        {element.payload.text}
-                    </ConversationElement>
-
-                    <ConversationBubbleSubtext>
-                        Sender... <Spinner />
-                    </ConversationBubbleSubtext>
-                </div>
-            );
-        }
-
-        if (response.source === 'client') {
-            const displaySentIndicator = Boolean(
-                mostRecentClientMessageIndex === undefined ||
-                    responseIndex === mostRecentClientMessageIndex
-            );
-
-            return (
-                <>
-                    <ConversationElement
-                        tabIndex={isObscured ? -1 : 0}
-                        alignment='right'
-                    >
-                        {element.payload.text}
-                    </ConversationElement>
-
-                    {displaySentIndicator && (
-                        <ConversationBubbleSubtext>
-                            Sendt
-                        </ConversationBubbleSubtext>
-                    )}
-                </>
-            );
-        }
-
-        return (
-            <ConversationElement
-                tabIndex={isObscured ? -1 : 0}
-                avatarUrl={response.avatar_url}
-            >
-                {element.payload.text}
-            </ConversationElement>
-        );
-    }
-
-    if (element.type === 'html') {
-        if (String(element.payload.html).startsWith('Init:Auth:')) {
-            const [, authenticationUrl] = element.payload.html.split(
-                'Init:Auth:'
-            );
-
-            return (
-                <LinkPanel
-                    border
-                    href={authenticationUrl}
-                    tabIndex={isObscured ? -1 : 0}
-                    target='_blank'
-                >
-                    <LinkPanelIcon
-                        dangerouslySetInnerHTML={{
-                            __html: idPortenIcon
-                        }}
-                    />
-
-                    <LinkPanelText>
-                        <Ingress>Elektronisk autentisering</Ingress>
-                        <Normaltekst>
-                            Vennligst logg inn så vi kan hjelpe deg.
-                        </Normaltekst>
-                    </LinkPanelText>
-                </LinkPanel>
-            );
-        }
-
-        return (
-            <ConversationElement
-                tabIndex={isObscured ? -1 : 0}
-                avatarUrl={response.avatar_url}
-            >
-                <ConversationBubbleContents
-                    dangerouslySetInnerHTML={{
-                        __html: String(element.payload.html)
-                    }}
-                />
-            </ConversationElement>
-        );
-    }
-
-    if (element.type === 'links') {
-        return (
-            <>
-                {element.payload.links.map((link, index) => (
-                    <ResponseElementLink
-                        // eslint-disable-next-line react/no-array-index-key
-                        key={index}
-                        tabIndex={isObscured ? -1 : 0}
-                        {...properties}
-                        {...{response, link}}
-                    />
-                ))}
-            </>
-        );
-    }
-
-    return null;
-};
-
-const BotTypingIndicator = (properties: {response?: BoostResponse}) => (
-    <ConversationElement isThinking avatarUrl={properties.response?.avatar_url}>
-        <TypingIndicator />
-    </ConversationElement>
-);
-
-interface ResponseProperties
-    extends Omit<ResponseElementProperties, 'element'> {
-    conversation?: BoostConversation;
-    onReveal?: () => void;
-}
-
-const Response = ({
-    conversation,
-    response,
-    responseIndex,
-    responsesLength,
-    onReveal,
-    ...properties
-}: ResponseProperties) => {
-    const isHuman = conversation?.state.chat_status === 'assigned_to_human';
-    const responseDate = new Date(response.date_created);
-    const responseTimestamp = responseDate.getTime();
-    let typingRevealTimestamp = 0;
-    let revealTimestamp = 0;
-
-    const shouldObscure =
-        !isHuman &&
-        response.source === 'bot' &&
-        responseIndex === (responsesLength ?? 1) - 1;
-
-    if (shouldObscure) {
-        typingRevealTimestamp =
-            responseIndex === 0
-                ? responseTimestamp
-                : responseTimestamp + botResponseRevealDelay;
-        revealTimestamp =
-            typingRevealTimestamp +
-            botResponseRevealDelayBuffer +
-            botResponseRevealDelayBuffer * Math.random();
-    }
-
-    const handleReveal = useCallback(() => {
-        if (onReveal) {
-            onReveal();
-        }
-    }, [onReveal]);
-
-    return (
-        <Obscured untilTimestamp={typingRevealTimestamp}>
-            <ConversationGroup lang={response.language}>
-                <Obscured
-                    untilTimestamp={revealTimestamp}
-                    by={<BotTypingIndicator {...{response}} />}
-                    onReveal={handleReveal}
-                >
-                    {response.elements.map((element, index) => {
-                        let elementTypingRevealTimestamp = 0;
-                        let elementRevealTimestamp = 0;
-
-                        if (shouldObscure) {
-                            if (index !== 0) {
-                                elementTypingRevealTimestamp =
-                                    revealTimestamp +
-                                    botResponseRevealDelay * index;
-
-                                elementRevealTimestamp =
-                                    element.type === 'links'
-                                        ? 0
-                                        : elementTypingRevealTimestamp +
-                                          botResponseRevealDelayBuffer +
-                                          botResponseRevealDelayBuffer *
-                                              Math.random();
-                            }
-                        }
-
-                        return (
-                            <Obscured
-                                // eslint-disable-next-line react/no-array-index-key
-                                key={index}
-                                untilTimestamp={elementTypingRevealTimestamp}
-                            >
-                                <Obscured
-                                    untilTimestamp={elementRevealTimestamp}
-                                    by={<BotTypingIndicator />}
-                                    onReveal={handleReveal}
-                                >
-                                    <ResponseElement
-                                        {...properties}
-                                        {...{
-                                            conversation,
-                                            response,
-                                            responseIndex,
-                                            responsesLength,
-                                            element
-                                        }}
-                                    />
-                                </Obscured>
-                            </Obscured>
-                        );
-                    })}
-                </Obscured>
-            </ConversationGroup>
-        </Obscured>
-    );
-};
-
-const Chat = () => {
+const Chat = ({analyticsCallback}: ChatProperties) => {
     const {
         id,
         status,
@@ -673,6 +249,7 @@ const Chat = () => {
     );
 
     const [isFinishing, setIsFinishing] = useState<boolean>(false);
+    const [isEvaluating, setIsEvaluating] = useState<boolean>(false);
     const [updateCount, setUpdateCount] = useState<number>(0);
     const [unreadCount, setUnreadCount] = useState<number>(
         () => Number.parseInt(String(cookies.get(unreadCookieName)), 10) || 0
@@ -692,12 +269,9 @@ const Chat = () => {
         }
     }, []);
 
-    const handleChange = useCallback(
-        (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-            setMessage(event.target.value);
-        },
-        []
-    );
+    function handleChange(event: React.ChangeEvent<HTMLTextAreaElement>) {
+        setMessage(event.target.value);
+    }
 
     const handleAction = useCallback(
         async (id: string) => {
@@ -747,9 +321,9 @@ const Chat = () => {
         }
     }, [status, start, scrollToBottom]);
 
-    const toggleFullscreen = useCallback(() => {
+    function toggleFullscreen() {
         setIsFullscreen((previousState) => !previousState);
-    }, []);
+    }
 
     const handleClose = useCallback(async () => {
         setIsClosing(true);
@@ -765,18 +339,40 @@ const Chat = () => {
     }, [restart]);
 
     const handleFinish = useCallback(async () => {
-        if (isFinishing) {
+        let shouldFinish = false;
+
+        if ((responsesLength || 0) < 2) {
+            shouldFinish = true;
+        } else if (isEvaluating) {
+            shouldFinish = true;
+        } else if (isFinishing) {
+            if (!analyticsCallback) {
+                shouldFinish = true;
+            }
+        }
+
+        if (shouldFinish) {
             await handleClose();
             void finish!();
             setIsFinishing(false);
+            setIsEvaluating(false);
+        } else if (isFinishing) {
+            setIsEvaluating(true);
         } else {
             setIsFinishing(true);
         }
-    }, [isFinishing, finish, handleClose]);
+    }, [
+        isFinishing,
+        isEvaluating,
+        analyticsCallback,
+        responsesLength,
+        finish,
+        handleClose
+    ]);
 
-    const handleCancelFinish = useCallback(async () => {
+    function handleCancelFinish() {
         setIsFinishing(false);
-    }, []);
+    }
 
     useEffect(() => {
         if (isOpen && (status === 'disconnected' || status === 'ended')) {
@@ -810,7 +406,7 @@ const Chat = () => {
 
     useEffect(() => {
         scrollToBottom();
-    }, [scrollToBottom, status, queue]);
+    }, [status, queue, scrollToBottom]);
 
     useEffect(() => {
         cookies.set(unreadCookieName, String(unreadCount), {
@@ -852,6 +448,7 @@ const Chat = () => {
 
     const isConsideredOpen = isOpen || isOpening;
     const isHuman = conversationStatus === 'assigned_to_human';
+    const isModalOpen = isFinishing || isEvaluating;
 
     return (
         <>
@@ -876,7 +473,7 @@ const Chat = () => {
                             <IconButton
                                 aria-label='Minimer chatvindu'
                                 type='button'
-                                tabIndex={isFinishing ? -1 : 0}
+                                tabIndex={isModalOpen ? -1 : 0}
                                 dangerouslySetInnerHTML={{
                                     __html: minimizeIcon
                                 }}
@@ -887,7 +484,7 @@ const Chat = () => {
                                 <FullscreenIconButton
                                     aria-label='Bruk mindre chatvindu'
                                     type='button'
-                                    tabIndex={isFinishing ? -1 : 0}
+                                    tabIndex={isModalOpen ? -1 : 0}
                                     dangerouslySetInnerHTML={{
                                         __html: contractIcon
                                     }}
@@ -897,7 +494,7 @@ const Chat = () => {
                                 <FullscreenIconButton
                                     aria-label='Åpne chat i fullskjerm'
                                     type='button'
-                                    tabIndex={isFinishing ? -1 : 0}
+                                    tabIndex={isModalOpen ? -1 : 0}
                                     dangerouslySetInnerHTML={{
                                         __html: fullscreenIcon
                                     }}
@@ -908,7 +505,7 @@ const Chat = () => {
                             <IconButton
                                 aria-label='Avslutt chat'
                                 type='button'
-                                tabIndex={isFinishing ? -1 : 0}
+                                tabIndex={isModalOpen ? -1 : 0}
                                 dangerouslySetInnerHTML={{
                                     __html: finishIcon
                                 }}
@@ -930,7 +527,7 @@ const Chat = () => {
                                     {...{conversation, response, responses}}
                                     responseIndex={index}
                                     responsesLength={responsesLength}
-                                    isObscured={isFinishing}
+                                    isObscured={isModalOpen}
                                     onAction={handleAction}
                                     onReveal={scrollToBottom}
                                 />
@@ -963,7 +560,7 @@ const Chat = () => {
                                 name='message'
                                 value={message}
                                 maxLength={messageMaxCharacters}
-                                tabIndex={isFinishing ? -1 : undefined}
+                                tabIndex={isModalOpen ? -1 : undefined}
                                 onChange={handleChange}
                                 onKeyDown={handleKeyDown}
                             />
@@ -972,7 +569,7 @@ const Chat = () => {
                                 <Knapp
                                     aria-label='Send melding'
                                     htmlType='submit'
-                                    tabIndex={isFinishing ? -1 : undefined}
+                                    tabIndex={isModalOpen ? -1 : undefined}
                                 >
                                     Send
                                 </Knapp>
@@ -983,7 +580,7 @@ const Chat = () => {
                                         aria-label='Start chat på nytt'
                                         htmlType='button'
                                         type='flat'
-                                        tabIndex={isFinishing ? -1 : undefined}
+                                        tabIndex={isModalOpen ? -1 : undefined}
                                         onClick={handleRestart}
                                     >
                                         Start på nytt
@@ -993,49 +590,26 @@ const Chat = () => {
                         </Padding>
                     </Form>
 
-                    <Modal
-                        isOpen={isFinishing}
-                        aria-label='Bekreft avslutning av chat'
+                    <FinishModal
+                        isOpen={isFinishing && !isEvaluating}
                         onConfirm={handleFinish}
-                    >
-                        <ModalText>
-                            Er du sikker på at du vil avslutte samtalen?
-                        </ModalText>
+                        onCancel={handleCancelFinish}
+                    />
 
-                        <ModalActions>
-                            <ModalKnapp
-                                mini
-                                kompakt
-                                htmlType='button'
-                                type='flat'
-                                aria-label='Avbryt avslutning'
-                                onClick={handleCancelFinish}
-                            >
-                                Avbryt
-                            </ModalKnapp>
-
-                            <ModalKnapp
-                                mini
-                                kompakt
-                                htmlType='button'
-                                type='hoved'
-                                aria-label='Bekreft avslutning av chat'
-                                onClick={handleFinish}
-                            >
-                                Ja, avslutt
-                            </ModalKnapp>
-                        </ModalActions>
-                    </Modal>
+                    <EvaluationModal
+                        isOpen={isEvaluating}
+                        onConfirm={handleFinish}
+                    />
                 </Container>
             )}
         </>
     );
 };
 
-const Chatbot = () => (
+const Chatbot = ({...properties}) => (
     <LanguageProvider>
         <SessionProvider>
-            <Chat />
+            <Chat {...properties} />
         </SessionProvider>
     </LanguageProvider>
 );

@@ -1,6 +1,6 @@
 import React, {useRef, useEffect} from 'react';
 import styled from 'styled-components';
-import {Normaltekst} from 'nav-frontend-typografi';
+import {Systemtittel, Normaltekst} from 'nav-frontend-typografi';
 import finishIcon from '../assets/finish.svg';
 
 const ModalContainer = styled.dialog`
@@ -9,7 +9,7 @@ const ModalContainer = styled.dialog`
     -webkit-backdrop-filter: blur(10px);
     width: 100%;
     height: 100%;
-    padding: 30px;
+    padding: 20px;
     position: absolute;
     top: 0;
     right: 0;
@@ -59,6 +59,9 @@ const CloseButton = styled.button`
 
 const ModalContents = styled.div`
     background: #fff;
+    max-height: 100%;
+    box-sizing: border-box;
+    overflow: auto;
     padding: 20px 20px;
     border-radius: 4px;
     margin: auto;
@@ -76,8 +79,18 @@ const ModalContents = styled.div`
         `}
 `;
 
+const ModalTitle = styled(Systemtittel)`
+    font-size: 20px;
+`;
+
+const ModalHeading = styled(Systemtittel)`
+    font-size: 17px;
+    margin-top: 4px;
+`;
+
 const ModalText = styled(Normaltekst)`
     font-size: 17px;
+    margin-bottom: 18px;
 `;
 
 const ModalActions = styled.div`
@@ -118,6 +131,7 @@ const Modal = ({
             <CloseButton
                 aria-label={ariaLabel}
                 type='button'
+                tabIndex={isOpen ? undefined : -1}
                 dangerouslySetInnerHTML={{
                     __html: finishIcon
                 }}
@@ -129,5 +143,14 @@ const Modal = ({
     );
 };
 
-export {ModalText, ModalActions, ModalContents, ModalContainer};
+export {
+    ModalProperties,
+    ModalTitle,
+    ModalHeading,
+    ModalText,
+    ModalActions,
+    ModalContents,
+    ModalContainer
+};
+
 export default Modal;

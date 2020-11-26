@@ -205,6 +205,27 @@ async function deleteBoostSession(
     return response.data;
 }
 
+interface BoostRateRequestResponse {
+    conversation: BoostConversation;
+}
+
+async function rateBoostSession(
+    conversationId: string,
+    rating: number,
+    message?: string
+): Promise<BoostRateRequestResponse> {
+    const response = await axios.post(apiUrlBase, {
+        command: 'FEEDBACK',
+        conversation_id: conversationId,
+        value: {
+            rating,
+            text: message
+        }
+    });
+
+    return response.data;
+}
+
 type BoostRequestResponse =
     | BoostStartRequestResponse
     | BoostResumeRequestResponse
@@ -234,6 +255,7 @@ interface Session {
     sendMessage?: (message: string) => Promise<void>;
     sendAction?: (actionId: string) => Promise<void>;
     sendPing?: () => Promise<void>;
+    sendFeedback?: (rating: number, message?: string) => Promise<void>;
 }
 
 const SessionContext = createContext<Session>({});
@@ -260,7 +282,7 @@ const SessionProvider = (properties: Record<string, unknown>) => {
     const [queue, setQueue] = useState<BoostResponse>();
     const [pollMultiplier, setPollMultiplier] = useState<number>(1);
 
-    const handleError = useCallback((error: any) => {
+    function handleError(error: any) {
         if (error?.response) {
             if (error.response.data.error === 'session ended') {
                 setStatus('ended');
@@ -275,7 +297,7 @@ const SessionProvider = (properties: Record<string, unknown>) => {
         }
 
         setStatus('error');
-    }, []);
+    }
 
     const sendMessage = useCallback(
         async (message: string) => {
@@ -312,7 +334,7 @@ const SessionProvider = (properties: Record<string, unknown>) => {
                 finishLoading();
             }
         },
-        [conversationId, setIsLoading, handleError]
+        [conversationId, setIsLoading]
     );
 
     const sendAction = useCallback(
@@ -331,7 +353,7 @@ const SessionProvider = (properties: Record<string, unknown>) => {
                 finishLoading();
             }
         },
-        [conversationId, setIsLoading, handleError]
+        [conversationId, setIsLoading]
     );
 
     const sendPing = useCallback(async () => {
@@ -341,6 +363,19 @@ const SessionProvider = (properties: Record<string, unknown>) => {
             });
         }
     }, [conversationId]);
+
+    const sendFeedback = useCallback(
+        async (rating: number, message?: string) => {
+            if (conversationId) {
+                await rateBoostSession(conversationId, rating, message).catch(
+                    (error) => {
+                        console.error(error);
+                    }
+                );
+            }
+        },
+        [conversationId]
+    );
 
     const update = useCallback(
         (updates: BoostRequestResponse) => {
@@ -470,7 +505,7 @@ const SessionProvider = (properties: Record<string, unknown>) => {
         }
 
         finishLoading();
-    }, [savedConversationId, language, setIsLoading, update, handleError]);
+    }, [savedConversationId, language, setIsLoading, update]);
 
     const remove = useCallback(async () => {
         setSavedConversationId(undefined);
@@ -500,7 +535,7 @@ const SessionProvider = (properties: Record<string, unknown>) => {
         }
 
         finishLoading();
-    }, [remove, setIsLoading, update, handleError]);
+    }, [remove, setIsLoading, update]);
 
     const finish = useCallback(async () => {
         const finishLoading = setIsLoading();
@@ -566,14 +601,7 @@ const SessionProvider = (properties: Record<string, unknown>) => {
         }
 
         return undefined;
-    }, [
-        status,
-        conversationId,
-        responses,
-        pollMultiplier,
-        update,
-        handleError
-    ]);
+    }, [status, conversationId, responses, pollMultiplier, update]);
 
     useEffect(() => {
         setSavedConversationId(conversationId);
@@ -607,6 +635,7 @@ const SessionProvider = (properties: Record<string, unknown>) => {
                 sendMessage,
                 sendAction,
                 sendPing,
+                sendFeedback,
                 start,
                 restart,
                 finish
