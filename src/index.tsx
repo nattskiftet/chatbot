@@ -481,9 +481,13 @@ const Chat = ({analyticsCallback}: ChatProperties) => {
     );
 };
 
-const Chatbot = ({...properties}) => (
+interface ChatbotProperties extends ChatProperties {
+    boostApiUrlBase?: string;
+}
+
+const Chatbot = ({boostApiUrlBase, ...properties}: ChatbotProperties) => (
     <LanguageProvider>
-        <SessionProvider>
+        <SessionProvider {...{boostApiUrlBase}}>
             <Chat {...properties} />
         </SessionProvider>
     </LanguageProvider>

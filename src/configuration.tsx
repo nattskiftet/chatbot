@@ -5,7 +5,7 @@ const internalClientLanguage = 'nb-NO';
 // Const internalClientLanguage = window.navigator.language;
 
 const clientLanguage = internalClientLanguage;
-const apiUrlBase = 'https://navtest.boost.ai/api/chat/v2';
+const boostApiUrlBase = 'https://navtest.boost.ai/api/chat/v2';
 const conversationIdCookieName = 'nav-chatbot:conversation';
 const languageCookieName = 'nav-chatbot:language';
 const openCookieName = 'nav-chatbot:open';
@@ -28,7 +28,7 @@ const fullscreenMediaQuery = `(max-width: ${
 export {
     cookieDomain,
     clientLanguage,
-    apiUrlBase,
+    boostApiUrlBase,
     conversationIdCookieName,
     languageCookieName,
     openCookieName,

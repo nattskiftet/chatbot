@@ -14,6 +14,11 @@ npm i @navikt/nav-chatbot
 ```javascript
 import NAVChatBot from '@navikt/nav-chatbot';
 <NAVChatBot/>
+// eller med options (defaults er definert nedenfor)
+<NAVChatBot
+    boostApiUrlBase='https://navtest.boost.ai/api/chat/v2'
+    analyticsCallback={console.log}
+/>
 ```
 
 ## Typescript

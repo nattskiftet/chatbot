@@ -11,7 +11,7 @@ import cookies from 'js-cookie';
 import useLoader from '../hooks/use-loader';
 
 import {
-    apiUrlBase,
+    boostApiUrlBase as defaultBoostApiUrlBase,
     cookieDomain,
     clientLanguage,
     conversationIdCookieName,
@@ -80,7 +80,9 @@ interface BoostStartRequestResponse {
     response: BoostResponse;
 }
 
-async function createBoostSession(): Promise<BoostStartRequestResponse> {
+async function createBoostSession(
+    apiUrlBase: string
+): Promise<BoostStartRequestResponse> {
     const response = await axios.post(apiUrlBase, {
         command: 'START',
         language: clientLanguage
@@ -99,6 +101,7 @@ interface BoostResumeRequestOptions {
 }
 
 async function getBoostSession(
+    apiUrlBase: string,
     conversationId: string,
     options?: BoostResumeRequestOptions
 ): Promise<BoostResumeRequestResponse> {
@@ -121,6 +124,7 @@ interface BoostPollRequestOptions {
 }
 
 async function pollBoostSession(
+    apiUrlBase: string,
     conversationId: string,
     options?: BoostPollRequestOptions
 ): Promise<BoostPollRequestResponse> {
@@ -155,6 +159,7 @@ interface BoostPostRequestOptions {
 }
 
 async function postBoostSession(
+    apiUrlBase: string,
     conversationId: string,
     options: BoostPostRequestOptionsText | BoostPostRequestOptionsLink
 ): Promise<BoostPostRequestResponse> {
@@ -180,6 +185,7 @@ interface BoostPingRequestResponse {
 }
 
 async function pingBoostSession(
+    apiUrlBase: string,
     conversationId: string
 ): Promise<BoostPingRequestResponse> {
     const response = await axios.post(apiUrlBase, {
@@ -195,6 +201,7 @@ interface BoostDeleteRequestResponse {
 }
 
 async function deleteBoostSession(
+    apiUrlBase: string,
     conversationId: string
 ): Promise<BoostDeleteRequestResponse> {
     const response = await axios.post(apiUrlBase, {
@@ -210,16 +217,16 @@ interface BoostRateRequestResponse {
 }
 
 async function rateBoostSession(
+    apiUrlBase: string,
     conversationId: string,
-    rating: number,
-    message?: string
+    data: {rating: number; message?: string}
 ): Promise<BoostRateRequestResponse> {
     const response = await axios.post(apiUrlBase, {
         command: 'FEEDBACK',
         conversation_id: conversationId,
         value: {
-            rating,
-            text: message
+            rating: data.rating,
+            text: data.message
         }
     });
 
@@ -260,7 +267,14 @@ interface Session {
 
 const SessionContext = createContext<Session>({});
 
-const SessionProvider = (properties: Record<string, unknown>) => {
+interface SessionProperties {
+    boostApiUrlBase?: string;
+}
+
+const SessionProvider = (properties: SessionProperties) => {
+    const boostApiUrlBase =
+        properties.boostApiUrlBase ?? defaultBoostApiUrlBase;
+
     const [status, setStatus] = useState<Session['status']>('disconnected');
     const [error, setError] = useState<SessionError>();
     const [isLoading, setIsLoading] = useLoader();
@@ -323,7 +337,7 @@ const SessionProvider = (properties: Record<string, unknown>) => {
                     };
                 });
 
-                await postBoostSession(conversationId, {
+                await postBoostSession(boostApiUrlBase, conversationId, {
                     type: 'text',
                     message
                 }).catch((error) => {
@@ -334,7 +348,7 @@ const SessionProvider = (properties: Record<string, unknown>) => {
                 finishLoading();
             }
         },
-        [conversationId, setIsLoading]
+        [boostApiUrlBase, conversationId, setIsLoading]
     );
 
     const sendAction = useCallback(
@@ -342,7 +356,7 @@ const SessionProvider = (properties: Record<string, unknown>) => {
             if (conversationId) {
                 const finishLoading = setIsLoading();
 
-                await postBoostSession(conversationId, {
+                await postBoostSession(boostApiUrlBase, conversationId, {
                     type: 'action_link',
                     id
                 }).catch((error) => {
@@ -353,28 +367,31 @@ const SessionProvider = (properties: Record<string, unknown>) => {
                 finishLoading();
             }
         },
-        [conversationId, setIsLoading]
+        [boostApiUrlBase, conversationId, setIsLoading]
     );
 
     const sendPing = useCallback(async () => {
         if (conversationId) {
-            await pingBoostSession(conversationId).catch((error) => {
-                console.error(error);
-            });
+            await pingBoostSession(boostApiUrlBase, conversationId).catch(
+                (error) => {
+                    console.error(error);
+                }
+            );
         }
-    }, [conversationId]);
+    }, [boostApiUrlBase, conversationId]);
 
     const sendFeedback = useCallback(
         async (rating: number, message?: string) => {
             if (conversationId) {
-                await rateBoostSession(conversationId, rating, message).catch(
-                    (error) => {
-                        console.error(error);
-                    }
-                );
+                await rateBoostSession(boostApiUrlBase, conversationId, {
+                    rating,
+                    message
+                }).catch((error) => {
+                    console.error(error);
+                });
             }
         },
-        [conversationId]
+        [boostApiUrlBase, conversationId]
     );
 
     const update = useCallback(
@@ -481,12 +498,16 @@ const SessionProvider = (properties: Record<string, unknown>) => {
 
         try {
             if (savedConversationId) {
-                const session = await getBoostSession(savedConversationId, {
-                    language
-                }).catch(async (error) => {
+                const session = await getBoostSession(
+                    boostApiUrlBase,
+                    savedConversationId,
+                    {
+                        language
+                    }
+                ).catch(async (error) => {
                     if (error?.response) {
                         if (error.response.data.error === 'session ended') {
-                            return createBoostSession();
+                            return createBoostSession(boostApiUrlBase);
                         }
                     }
 
@@ -495,7 +516,7 @@ const SessionProvider = (properties: Record<string, unknown>) => {
 
                 update(session);
             } else {
-                const session = await createBoostSession();
+                const session = await createBoostSession(boostApiUrlBase);
                 update(session);
             }
 
@@ -505,7 +526,7 @@ const SessionProvider = (properties: Record<string, unknown>) => {
         }
 
         finishLoading();
-    }, [savedConversationId, language, setIsLoading, update]);
+    }, [boostApiUrlBase, savedConversationId, language, setIsLoading, update]);
 
     const remove = useCallback(async () => {
         setSavedConversationId(undefined);
@@ -514,11 +535,13 @@ const SessionProvider = (properties: Record<string, unknown>) => {
         setQueue(undefined);
 
         if (conversationId && canDeleteConversation) {
-            await deleteBoostSession(conversationId).catch((error) => {
-                console.error(error);
-            });
+            await deleteBoostSession(boostApiUrlBase, conversationId).catch(
+                (error) => {
+                    console.error(error);
+                }
+            );
         }
-    }, [conversationId, canDeleteConversation]);
+    }, [boostApiUrlBase, conversationId, canDeleteConversation]);
 
     const restart = useCallback(async () => {
         const finishLoading = setIsLoading();
@@ -527,7 +550,7 @@ const SessionProvider = (properties: Record<string, unknown>) => {
         setStatus('connecting');
 
         try {
-            const createdSession = await createBoostSession();
+            const createdSession = await createBoostSession(boostApiUrlBase);
             update(createdSession);
             setStatus('connected');
         } catch (error) {
@@ -535,7 +558,7 @@ const SessionProvider = (properties: Record<string, unknown>) => {
         }
 
         finishLoading();
-    }, [remove, setIsLoading, update]);
+    }, [boostApiUrlBase, remove, setIsLoading, update]);
 
     const finish = useCallback(async () => {
         const finishLoading = setIsLoading();
@@ -556,7 +579,7 @@ const SessionProvider = (properties: Record<string, unknown>) => {
                 const [mostRecentResponse] = (responses ?? []).slice(-1);
                 const mostRecentResponseId = mostRecentResponse.id;
 
-                await pollBoostSession(conversationId, {
+                await pollBoostSession(boostApiUrlBase, conversationId, {
                     mostRecentResponseId
                 })
                     .then((updatedSession) => {
@@ -601,7 +624,14 @@ const SessionProvider = (properties: Record<string, unknown>) => {
         }
 
         return undefined;
-    }, [status, conversationId, responses, pollMultiplier, update]);
+    }, [
+        boostApiUrlBase,
+        status,
+        conversationId,
+        responses,
+        pollMultiplier,
+        update
+    ]);
 
     useEffect(() => {
         setSavedConversationId(conversationId);

@@ -4,11 +4,7 @@ import {Textarea, RadioGruppe, Radio} from 'nav-frontend-skjema';
 import {Knapp} from 'nav-frontend-knapper';
 import useSession from '../contexts/session';
 
-import Modal, {
-    ModalProperties,
-    TitleElement,
-    TextElement
-} from './modal';
+import Modal, {ModalProperties, TitleElement, TextElement} from './modal';
 
 const ActionsElement = styled.div`
     margin-top: 20px;

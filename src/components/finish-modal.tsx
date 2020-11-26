@@ -2,11 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import {Knapp} from 'nav-frontend-knapper';
 
-import Modal, {
-    ModalProperties,
-    TextElement,
-    ActionsElement
-} from './modal';
+import Modal, {ModalProperties, TextElement, ActionsElement} from './modal';
 
 const ButtonElement = styled(Knapp)`
     margin-left: 5px;
@@ -27,9 +23,7 @@ const FinishModal = ({
         {...{isOpen, onConfirm}}
         {...properties}
     >
-        <TextElement>
-            Er du sikker på at du vil avslutte samtalen?
-        </TextElement>
+        <TextElement>Er du sikker på at du vil avslutte samtalen?</TextElement>
 
         <ActionsElement>
             <ButtonElement
