@@ -1,33 +1,27 @@
 import React, {useMemo} from 'react';
 import styled from 'styled-components';
 import {LenkepanelBase} from 'nav-frontend-lenkepanel';
-
 import {Ingress, Normaltekst, Undertekst} from 'nav-frontend-typografi';
-
 import idPortenIcon from '../assets/id-porten.svg';
 import {BoostResponse, BoostResponseElement} from '../contexts/session';
 import Spinner from './spinner';
 import Conversation, {GroupElement} from './message';
-
-import ResponseElementLink, {
-    ResponseElementLinkProperties
-} from './response-link';
-
+import ResponseLink, {ResponseLinkProperties} from './response-link';
 import {authenticationPrefix} from '../configuration';
 
-const ConversationBubbleContents = styled.span`
+const ContentsElement = styled.span`
     p {
         margin: 0;
         padding: 0;
     }
 `;
 
-const ConversationBubbleSubtext = styled(Undertekst)`
+const SubtextElement = styled(Undertekst)`
     text-align: right;
     color: #444;
 `;
 
-const LinkPanel = styled(LenkepanelBase)`
+const LinkPanelElement = styled(LenkepanelBase)`
     margin-top: 15px;
     margin-bottom: 15px;
 
@@ -36,7 +30,7 @@ const LinkPanel = styled(LenkepanelBase)`
     }
 `;
 
-const LinkPanelIcon = styled.div`
+const LinkPanelIconElement = styled.div`
     background: #d0d2cf;
     width: 36px;
     height: 36px;
@@ -45,13 +39,12 @@ const LinkPanelIcon = styled.div`
     border-radius: 2px;
 `;
 
-const LinkPanelText = styled.div`
+const LinkPanelTextElement = styled.div`
     margin-left: 20px;
     flex: 1;
 `;
 
-interface ResponseElementProperties
-    extends Omit<ResponseElementLinkProperties, 'link'> {
+interface ResponseItemProperties extends Omit<ResponseLinkProperties, 'link'> {
     responseIndex?: number;
     element: BoostResponseElement;
     responses?: BoostResponse[];
@@ -59,7 +52,7 @@ interface ResponseElementProperties
     isObscured?: boolean;
 }
 
-const ResponseElement = ({
+const ResponseItem = ({
     response,
     responseIndex,
     element,
@@ -67,7 +60,7 @@ const ResponseElement = ({
     responsesLength,
     isObscured,
     ...properties
-}: ResponseElementProperties) => {
+}: ResponseItemProperties) => {
     const mostRecentClientMessageIndex = useMemo(
         () =>
             (responsesLength ?? 0) -
@@ -90,9 +83,9 @@ const ResponseElement = ({
                         {element.payload.text}
                     </Conversation>
 
-                    <ConversationBubbleSubtext>
+                    <SubtextElement>
                         Sender... <Spinner />
-                    </ConversationBubbleSubtext>
+                    </SubtextElement>
                 </div>
             );
         }
@@ -113,9 +106,7 @@ const ResponseElement = ({
                     </Conversation>
 
                     {displaySentIndicator && (
-                        <ConversationBubbleSubtext>
-                            Sendt
-                        </ConversationBubbleSubtext>
+                        <SubtextElement>Sendt</SubtextElement>
                     )}
                 </>
             );
@@ -138,25 +129,25 @@ const ResponseElement = ({
             const [, authenticationUrl] = html.split(authenticationPrefix);
 
             return (
-                <LinkPanel
+                <LinkPanelElement
                     border
                     href={authenticationUrl}
                     tabIndex={isObscured ? -1 : 0}
                     target='_blank'
                 >
-                    <LinkPanelIcon
+                    <LinkPanelIconElement
                         dangerouslySetInnerHTML={{
                             __html: idPortenIcon
                         }}
                     />
 
-                    <LinkPanelText>
+                    <LinkPanelTextElement>
                         <Ingress>Elektronisk autentisering</Ingress>
                         <Normaltekst>
                             Vennligst logg inn så vi kan hjelpe deg.
                         </Normaltekst>
-                    </LinkPanelText>
-                </LinkPanel>
+                    </LinkPanelTextElement>
+                </LinkPanelElement>
             );
         }
 
@@ -165,9 +156,7 @@ const ResponseElement = ({
                 tabIndex={isObscured ? -1 : 0}
                 avatarUrl={response.avatar_url}
             >
-                <ConversationBubbleContents
-                    dangerouslySetInnerHTML={{__html: html}}
-                />
+                <ContentsElement dangerouslySetInnerHTML={{__html: html}} />
             </Conversation>
         );
     }
@@ -176,7 +165,7 @@ const ResponseElement = ({
         return (
             <>
                 {element.payload.links.map((link, index) => (
-                    <ResponseElementLink
+                    <ResponseLink
                         // eslint-disable-next-line react/no-array-index-key
                         key={index}
                         tabIndex={isObscured ? -1 : 0}
@@ -191,5 +180,5 @@ const ResponseElement = ({
     return null;
 };
 
-export {ResponseElementProperties};
-export default ResponseElement;
+export {ResponseItemProperties};
+export default ResponseItem;

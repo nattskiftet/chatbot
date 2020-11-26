@@ -19,7 +19,7 @@ import Message, {
 import {linkDisableTimeout} from '../configuration';
 import Spinner, {SpinnerElement} from './spinner';
 
-const ResponseElementLinkButton = styled(RadioPanelGruppe)`
+const LinkButtonElement = styled(RadioPanelGruppe)`
     max-width: ${conversationSideWidth};
     max-width: calc(${conversationSideWidth} - ${avatarSize} - 8px);
     margin-top: 3px;
@@ -41,19 +41,19 @@ const ResponseElementLinkButton = styled(RadioPanelGruppe)`
     }
 `;
 
-interface ResponseElementLinkProperties {
+interface ResponseLinkProperties {
     response: BoostResponse;
     link: BoostResponseElementLinksItem;
     tabIndex?: number;
     onAction?: Session['sendAction'];
 }
 
-const ResponseElementLink = ({
+const ResponseLink = ({
     response,
     link,
     tabIndex,
     onAction
-}: ResponseElementLinkProperties) => {
+}: ResponseLinkProperties) => {
     const [isSelected, setIsSelected] = useState(false);
     const [isDisabled, setIsDisabled] = useState(false);
     const [isLoading, setIsLoading] = useLoader();
@@ -105,7 +105,7 @@ const ResponseElementLink = ({
     return (
         <ContainerElement onKeyPress={handleKeyPress}>
             <AvatarElement />
-            <ResponseElementLinkButton
+            <LinkButtonElement
                 name={link.text}
                 radios={[
                     {
@@ -127,5 +127,5 @@ const ResponseElementLink = ({
     );
 };
 
-export {ResponseElementLinkProperties};
-export default ResponseElementLink;
+export {ResponseLinkProperties};
+export default ResponseLink;

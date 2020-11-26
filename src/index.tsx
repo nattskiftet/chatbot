@@ -1,17 +1,15 @@
 import React, {useRef, useState, useEffect, useCallback} from 'react';
 import styled from 'styled-components';
 import cookies from 'js-cookie';
-import {Textarea} from 'nav-frontend-skjema';
-import {Knapp} from 'nav-frontend-knapper';
 import delay from './utilities/delay';
 import {LanguageProvider} from './contexts/language';
 import useSession, {SessionProvider} from './contexts/session';
-import useDebouncedEffect from './hooks/use-debounced-effect';
 import Header from './components/header';
 import TypingIndicator from './components/typing-indicator';
 import OpenButton from './components/open-button';
 import StatusStrip from './components/status-strip';
 import Message, {GroupElement} from './components/message';
+import Form from './components/form';
 import Response from './components/response';
 import FinishModal from './components/finish-modal';
 import EvaluationModal from './components/evaluation-modal';
@@ -123,30 +121,12 @@ const AnchorElement = styled.div`
     scroll-snap-align: start;
 `;
 
-const FormElement = styled.form`
-    background: #f4f4f4;
-    border-top: 1px solid #78706a;
-    box-shadow: inset 0 1px 0 #fff;
-`;
-
-const ActionsElement = styled.div`
-    margin-top: 10px;
-    display: flex;
-    flex-direction: row-reverse;
-`;
-
-const RestartButtonElement = styled(Knapp)`
-    padding: 0 15px;
-    margin-right: 10px;
-`;
-
 interface ChatProperties {
     analyticsCallback?: () => void;
 }
 
 const Chat = ({analyticsCallback}: ChatProperties) => {
     const {
-        id,
         status,
         conversation,
         responses,
@@ -155,13 +135,12 @@ const Chat = ({analyticsCallback}: ChatProperties) => {
         restart,
         finish,
         sendMessage,
-        sendAction,
-        sendPing
+        sendAction
     } = useSession();
 
+    const responsesLength = responses?.length;
     const reference = useRef<HTMLDivElement>();
     const anchor = useRef<HTMLDivElement>();
-    const [message, setMessage] = useState<string>('');
     const [isClosing, setIsClosing] = useState<boolean>(false);
     const [isOpening, setIsOpening] = useState<boolean>(false);
     const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
@@ -177,10 +156,6 @@ const Chat = ({analyticsCallback}: ChatProperties) => {
         () => Number.parseInt(String(cookies.get(unreadCookieName)), 10) || 0
     );
 
-    const responsesLength = responses?.length;
-    const conversationStatus = conversation?.state.chat_status;
-    const messageMaxCharacters = conversation?.state.max_input_chars ?? 110;
-
     const scrollToBottom = useCallback((options?: ScrollIntoViewOptions) => {
         if (anchor.current) {
             anchor.current.scrollIntoView({
@@ -191,10 +166,6 @@ const Chat = ({analyticsCallback}: ChatProperties) => {
         }
     }, []);
 
-    function handleChange(event: React.ChangeEvent<HTMLTextAreaElement>) {
-        setMessage(event.target.value);
-    }
-
     const handleAction = useCallback(
         async (id: string) => {
             await sendAction!(id);
@@ -204,27 +175,10 @@ const Chat = ({analyticsCallback}: ChatProperties) => {
     );
 
     const handleSubmit = useCallback(
-        (event?: React.FormEvent<HTMLFormElement>) => {
-            event?.preventDefault();
-
-            if (message) {
-                if (message.length < messageMaxCharacters) {
-                    setMessage('');
-                    void sendMessage!(message);
-                }
-            }
+        (message: string) => {
+            void sendMessage!(message);
         },
-        [message, messageMaxCharacters, sendMessage]
-    );
-
-    const handleKeyDown = useCallback(
-        (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-            if (event.key.toLowerCase() === 'enter' && !event.shiftKey) {
-                event.preventDefault();
-                handleSubmit();
-            }
-        },
-        [handleSubmit]
+        [sendMessage]
     );
 
     const handleOpen = useCallback(async () => {
@@ -358,16 +312,6 @@ const Chat = ({analyticsCallback}: ChatProperties) => {
         setIsAgentTyping(false);
     }, [responses]);
 
-    useDebouncedEffect(
-        2000,
-        () => {
-            if (id && message) {
-                void sendPing!();
-            }
-        },
-        [message]
-    );
-
     const isConsideredOpen = isOpen || isOpening;
     const isModalOpen = isFinishing || isEvaluating;
 
@@ -428,42 +372,11 @@ const Chat = ({analyticsCallback}: ChatProperties) => {
                         </PaddingElement>
                     </ConversationElement>
 
-                    <FormElement onSubmit={handleSubmit}>
-                        <PaddingElement>
-                            <Textarea
-                                aria-label='Din melding'
-                                name='message'
-                                value={message}
-                                maxLength={messageMaxCharacters}
-                                tabIndex={isModalOpen ? -1 : undefined}
-                                onChange={handleChange}
-                                onKeyDown={handleKeyDown}
-                            />
-
-                            <ActionsElement>
-                                <Knapp
-                                    aria-label='Send melding'
-                                    htmlType='submit'
-                                    tabIndex={isModalOpen ? -1 : undefined}
-                                >
-                                    Send
-                                </Knapp>
-
-                                {conversationStatus === 'virtual_agent' && (
-                                    <RestartButtonElement
-                                        mini
-                                        aria-label='Start chat på nytt'
-                                        htmlType='button'
-                                        type='flat'
-                                        tabIndex={isModalOpen ? -1 : undefined}
-                                        onClick={handleRestart}
-                                    >
-                                        Start på nytt
-                                    </RestartButtonElement>
-                                )}
-                            </ActionsElement>
-                        </PaddingElement>
-                    </FormElement>
+                    <Form
+                        isObscured={isModalOpen}
+                        onSubmit={handleSubmit}
+                        onRestart={handleRestart}
+                    />
 
                     <FinishModal
                         isOpen={isFinishing && !isEvaluating}

@@ -3,7 +3,7 @@ import React, {useCallback} from 'react';
 import {BoostConversation, BoostResponse} from '../contexts/session';
 import Obscured from './obscurer';
 import TypingIndicator from './typing-indicator';
-import ResponseElement, {ResponseElementProperties} from './response-element';
+import ResponseItem, {ResponseItemProperties} from './response-item';
 import Message, {GroupElement} from './message';
 
 import {
@@ -17,8 +17,7 @@ const BotTypingIndicator = (properties: {response?: BoostResponse}) => (
     </Message>
 );
 
-interface ResponseProperties
-    extends Omit<ResponseElementProperties, 'element'> {
+interface ResponseProperties extends Omit<ResponseItemProperties, 'element'> {
     conversation?: BoostConversation;
     onReveal?: () => void;
 }
@@ -98,7 +97,7 @@ const Response = ({
                                     by={<BotTypingIndicator />}
                                     onReveal={handleReveal}
                                 >
-                                    <ResponseElement
+                                    <ResponseItem
                                         {...properties}
                                         {...{
                                             conversation,
