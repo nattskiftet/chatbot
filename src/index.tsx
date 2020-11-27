@@ -408,4 +408,5 @@ const Chatbot = ({boostApiUrlBase, ...properties}: ChatbotProperties) => (
     </LanguageProvider>
 );
 
+export {ChatbotProperties};
 export default Chatbot;
