@@ -1,8 +1,9 @@
-import React from 'react';
+import React, {useMemo} from 'react';
 import styled from 'styled-components';
 import {Normaltekst, Undertekst} from 'nav-frontend-typografi';
 import fridaIcon from '../assets/frida.svg';
 import useSession from '../contexts/session';
+import useLanguage from '../contexts/language';
 
 const openButtonAvatarSizeNumber = 60;
 const openButtonAvatarSize = `${openButtonAvatarSizeNumber}px`;
@@ -126,6 +127,25 @@ const UnreadCountElement = styled(Undertekst)`
     }
 `;
 
+const translations = {
+    open_chat: {
+        en: 'Open chat',
+        no: 'Åpne chat'
+    },
+    chat_with_us: {
+        en: 'Chat with us',
+        no: 'Chat med oss'
+    },
+    unread_message: {
+        en: 'unread message',
+        no: 'ulest melding'
+    },
+    unread_messages: {
+        en: 'unread messages',
+        no: 'uleste meldinger'
+    }
+};
+
 interface OpenButtonProperties {
     isOpen: boolean;
     isOpening: boolean;
@@ -139,21 +159,27 @@ const OpenButton = ({
     unreadCount,
     onClick
 }: OpenButtonProperties) => {
+    const {language, translate} = useLanguage();
     const {status} = useSession();
+    const localizations = useMemo(() => translate(translations), [translate]);
     const openButtonLabelPrefix =
-        status === 'connected' ? 'Åpne chat' : 'Chat med oss';
+        status === 'connected'
+            ? localizations.open_chat
+            : localizations.chat_with_us;
+
     let openButtonLabel = openButtonLabelPrefix;
 
     if (unreadCount > 0) {
         openButtonLabel +=
             unreadCount > 1
-                ? ` (${unreadCount} uleste meldinger)`
-                : ` (${unreadCount} ulest melding)`;
+                ? ` (${unreadCount} ${localizations.unread_messages})`
+                : ` (${unreadCount} ${localizations.unread_message})`;
     }
 
     return (
         <ButtonElement
             type='button'
+            lang={language}
             aria-label={openButtonLabel}
             isVisible={!isOpen && !isOpening}
             tabIndex={isOpen ? -1 : 0}

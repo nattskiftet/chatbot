@@ -1,8 +1,11 @@
 const cookieDomain =
     window.location.hostname === 'localhost' ? undefined : '.nav.no';
 
-const internalClientLanguage = 'nb-NO';
-// Const internalClientLanguage = window.navigator.language;
+let internalClientLanguage = 'no';
+
+if (window.location.href.startsWith('https://www.nav.no/en/')) {
+    internalClientLanguage = 'en';
+}
 
 const clientLanguage = internalClientLanguage;
 const boostApiUrlBase = 'https://navtest.boost.ai/api/chat/v2';

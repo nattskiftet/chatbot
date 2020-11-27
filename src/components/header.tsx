@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useMemo} from 'react';
 import styled from 'styled-components';
 import {Innholdstittel} from 'nav-frontend-typografi';
 import finishIcon from '../assets/finish.svg';
@@ -7,6 +7,7 @@ import fullscreenIcon from '../assets/maximize.svg';
 import contractIcon from '../assets/contract.svg';
 import useSession from '../contexts/session';
 import {fullscreenMediaQuery} from '../configuration';
+import useLanguage from '../contexts/language';
 
 const TitleElement = styled(Innholdstittel)`
     font-size: 22px;
@@ -78,6 +79,29 @@ const FullscreenIconButtonElement = styled(IconButtonElement)`
     }
 `;
 
+const translations = {
+    chat_with_nav: {
+        en: 'Chat with NAV',
+        no: 'Chat med NAV'
+    },
+    minimize_chat_window: {
+        en: 'Minimize chat window',
+        no: 'Minimer chatvindu'
+    },
+    smaller_chat_window: {
+        en: 'Use smaller chat window',
+        no: 'Bruk mindre chatvindu'
+    },
+    open_in_fullscreen: {
+        en: 'Open chat in fullscreen',
+        no: 'Åpne chat i fullskjerm'
+    },
+    end_chat: {
+        en: 'End chat',
+        no: 'Avslutt chat'
+    }
+};
+
 interface HeaderProperties {
     isFullscreen?: boolean;
     isObscured?: boolean;
@@ -94,20 +118,22 @@ const Header = ({
     onFinish,
     ...properties
 }: HeaderProperties) => {
+    const {translate} = useLanguage();
     const {conversation} = useSession();
+    const localizations = useMemo(() => translate(translations), [translate]);
     const isHumanChat = conversation?.state.chat_status === 'assigned_to_human';
 
     return (
         <HeaderElement {...{isHumanChat}} {...properties}>
             {isHumanChat ? (
-                <TitleElement>Chat med NAV</TitleElement>
+                <TitleElement>{localizations.chat_with_nav}</TitleElement>
             ) : (
                 <TitleElement>Chatbot Frida</TitleElement>
             )}
 
             <HeaderActionsElement>
                 <IconButtonElement
-                    aria-label='Minimer chatvindu'
+                    aria-label={localizations.minimize_chat_window}
                     type='button'
                     tabIndex={isObscured ? -1 : 0}
                     dangerouslySetInnerHTML={{
@@ -118,7 +144,7 @@ const Header = ({
 
                 {isFullscreen ? (
                     <FullscreenIconButtonElement
-                        aria-label='Bruk mindre chatvindu'
+                        aria-label={localizations.smaller_chat_window}
                         type='button'
                         tabIndex={isObscured ? -1 : 0}
                         dangerouslySetInnerHTML={{
@@ -128,7 +154,7 @@ const Header = ({
                     />
                 ) : (
                     <FullscreenIconButtonElement
-                        aria-label='Åpne chat i fullskjerm'
+                        aria-label={localizations.open_in_fullscreen}
                         type='button'
                         tabIndex={isObscured ? -1 : 0}
                         dangerouslySetInnerHTML={{
@@ -139,7 +165,7 @@ const Header = ({
                 )}
 
                 <IconButtonElement
-                    aria-label='Avslutt chat'
+                    aria-label={localizations.end_chat}
                     type='button'
                     tabIndex={isObscured ? -1 : 0}
                     dangerouslySetInnerHTML={{

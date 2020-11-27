@@ -2,7 +2,7 @@ import React, {useRef, useState, useEffect, useCallback} from 'react';
 import styled from 'styled-components';
 import cookies from 'js-cookie';
 import delay from './utilities/delay';
-import {LanguageProvider} from './contexts/language';
+import useLanguage, {LanguageProvider} from './contexts/language';
 import useSession, {SessionProvider} from './contexts/session';
 import Header from './components/header';
 import TypingIndicator from './components/typing-indicator';
@@ -97,7 +97,6 @@ const StatusElement = styled.div`
 const StatusContainerElement = styled.div`
     position: sticky;
     bottom: 10px;
-
     margin-top: 15px;
 
     &:first-child {
@@ -113,6 +112,7 @@ const ConversationElement = styled.div`
 `;
 
 const FillerElement = styled.div`
+    height: 100%;
     min-height: ${containerHeight};
 `;
 
@@ -126,6 +126,7 @@ interface ChatProperties {
 }
 
 const Chat = ({analyticsCallback}: ChatProperties) => {
+    const {language} = useLanguage();
     const {
         status,
         conversation,
@@ -325,6 +326,7 @@ const Chat = ({analyticsCallback}: ChatProperties) => {
             {isConsideredOpen && (
                 <ContainerElement
                     ref={reference as any}
+                    lang={language}
                     {...{isFullscreen, isClosing, isOpening}}
                 >
                     <Header

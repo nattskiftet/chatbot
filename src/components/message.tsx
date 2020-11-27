@@ -1,6 +1,7 @@
-import React from 'react';
+import React, {useMemo} from 'react';
 import styled from 'styled-components';
 import {Normaltekst} from 'nav-frontend-typografi';
+import useLanguage from '../contexts/language';
 
 const avatarSize = '36px';
 const conversationSideWidth = '90%';
@@ -131,6 +132,17 @@ const BubbleRightElement = styled(MessageBubble)`
 
 const TextElement = styled(Normaltekst)``;
 
+const translations = {
+    you_say: {
+        en: 'You say',
+        no: 'Du sier'
+    },
+    nav_says: {
+        en: 'NAV says',
+        no: 'NAV sier'
+    }
+};
+
 interface MessageProperties {
     avatarUrl?: string;
     alignment?: 'left' | 'right';
@@ -147,9 +159,14 @@ const Message = ({
     children,
     ...properties
 }: MessageProperties) => {
-    const label = alignment === 'right' ? 'Du sier:' : 'NAV sier:';
+    const {translate} = useLanguage();
+    const localizations = useMemo(() => translate(translations), [translate]);
     const BubbleElement =
         alignment === 'right' ? BubbleRightElement : BubbleLeftElement;
+    const label =
+        alignment === 'right'
+            ? `${localizations.you_say}:`
+            : `${localizations.nav_says}:`;
 
     return (
         <ContainerElement {...properties}>

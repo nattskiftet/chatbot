@@ -1,9 +1,9 @@
-import React, {useState} from 'react';
+import React, {useState, useMemo} from 'react';
 import styled from 'styled-components';
 import {Textarea, RadioGruppe, Radio} from 'nav-frontend-skjema';
 import {Knapp} from 'nav-frontend-knapper';
+import useLanguage from '../contexts/language';
 import useSession from '../contexts/session';
-
 import Modal, {ModalProperties, TitleElement, TextElement} from './modal';
 
 const ActionsElement = styled.div`
@@ -15,14 +15,51 @@ const ActionsSpacerElement = styled.div`
     flex: 1;
 `;
 
+const translations = {
+    chat_evaluation: {
+        en: 'Chat evaluation',
+        no: 'Evaluering av chat'
+    },
+    chat_has_ended: {
+        en: 'The chat has ended.',
+        no: 'Chatten er avsluttet.'
+    },
+    consider_evaluating: {
+        en: 'If you have time, please consider evaluating your experience.',
+        no: 'Hvis du har tid, ønsker vi gjerne å lære av opplevelsen din.'
+    },
+    your_rating: {
+        en: 'Were your questions answered?',
+        no: 'Fikk du svar på det du lurte på?'
+    },
+    your_feedback: {
+        en: 'Your feedback',
+        no: 'Din tilbakemelding'
+    },
+    yes: {
+        en: 'Yes',
+        no: 'Ja'
+    },
+    no: {
+        en: 'No',
+        no: 'Nei'
+    },
+    submit: {
+        en: 'Submit',
+        no: 'Send inn'
+    }
+};
+
 const EvaluationModal = ({
     isOpen,
     onConfirm,
     ...properties
 }: ModalProperties) => {
+    const {translate} = useLanguage();
     const {sendFeedback} = useSession();
     const [rating, setRating] = useState<string>();
     const [message, setMessage] = useState<string>('');
+    const localizations = useMemo(() => translate(translations), [translate]);
 
     function handleRatingClick(event: React.MouseEvent) {
         const target = event.target as HTMLInputElement;
@@ -50,22 +87,21 @@ const EvaluationModal = ({
 
     return (
         <Modal
-            aria-label='Evaluering av chat'
+            aria-label={localizations.chat_evaluation}
             {...{isOpen, onConfirm}}
             {...properties}
         >
             {isOpen && (
                 <form onSubmit={handleSubmit}>
-                    <TitleElement>Chatten er avsluttet.</TitleElement>
+                    <TitleElement>{localizations.chat_has_ended}</TitleElement>
                     <TextElement>
-                        Hvis du har tid, ønsker vi gjerne å lære av opplevelsen
-                        din.
+                        {localizations.consider_evaluating}
                     </TextElement>
 
-                    <RadioGruppe legend='Fikk du svar på det du lurte på?'>
+                    <RadioGruppe legend={localizations.your_rating}>
                         <Radio
                             readOnly
-                            label='Ja'
+                            label={localizations.yes}
                             name='yes'
                             value='1'
                             checked={rating === '1'}
@@ -73,7 +109,7 @@ const EvaluationModal = ({
                         />
                         <Radio
                             readOnly
-                            label='Nei'
+                            label={localizations.no}
                             name='no'
                             value='0'
                             checked={rating === '0'}
@@ -83,14 +119,14 @@ const EvaluationModal = ({
 
                     <Textarea
                         value={message}
-                        label='Din tilbakemelding'
+                        label={localizations.your_feedback}
                         onChange={handleMessageChange}
                     />
 
                     <ActionsElement>
                         <ActionsSpacerElement />
                         <Knapp kompakt mini htmlType='submit'>
-                            Send inn
+                            {localizations.submit}
                         </Knapp>
                     </ActionsElement>
                 </form>

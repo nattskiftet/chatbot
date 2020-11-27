@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import {LenkepanelBase} from 'nav-frontend-lenkepanel';
 import {Ingress, Normaltekst, Undertekst} from 'nav-frontend-typografi';
 import idPortenIcon from '../assets/id-porten.svg';
+import useLanguage from '../contexts/language';
 import {BoostResponse, BoostResponseElement} from '../contexts/session';
 import Spinner from './spinner';
 import Conversation, {GroupElement} from './message';
@@ -44,6 +45,25 @@ const LinkPanelTextElement = styled.div`
     flex: 1;
 `;
 
+const translations = {
+    sending: {
+        en: 'Sending...',
+        no: 'Sender...'
+    },
+    sent: {
+        en: 'Sent',
+        no: 'Sendt'
+    },
+    electronic_authentication: {
+        en: 'Electronic authentication',
+        no: 'Elektronisk autentisering'
+    },
+    please_log_in: {
+        en: 'For us to help you, please log in.',
+        no: 'Vennligst logg inn så vi kan hjelpe deg.'
+    }
+};
+
 interface ResponseItemProperties extends Omit<ResponseLinkProperties, 'link'> {
     responseIndex?: number;
     element: BoostResponseElement;
@@ -61,6 +81,8 @@ const ResponseItem = ({
     isObscured,
     ...properties
 }: ResponseItemProperties) => {
+    const {translate} = useLanguage();
+    const localizations = useMemo(() => translate(translations), [translate]);
     const mostRecentClientMessageIndex = useMemo(
         () =>
             (responsesLength ?? 0) -
@@ -86,7 +108,7 @@ const ResponseItem = ({
                     </Conversation>
 
                     <SubtextElement>
-                        Sender... <Spinner />
+                        {localizations.sending} <Spinner />
                     </SubtextElement>
                 </div>
             );
@@ -108,7 +130,7 @@ const ResponseItem = ({
                     </Conversation>
 
                     {displaySentIndicator && (
-                        <SubtextElement>Sendt</SubtextElement>
+                        <SubtextElement>{localizations.send}</SubtextElement>
                     )}
                 </>
             );
@@ -144,10 +166,10 @@ const ResponseItem = ({
                     />
 
                     <LinkPanelTextElement>
-                        <Ingress>Elektronisk autentisering</Ingress>
-                        <Normaltekst>
-                            Vennligst logg inn så vi kan hjelpe deg.
-                        </Normaltekst>
+                        <Ingress>
+                            {localizations.electronic_authentication}
+                        </Ingress>
+                        <Normaltekst>{localizations.please_log_in}</Normaltekst>
                     </LinkPanelTextElement>
                 </LinkPanelElement>
             );

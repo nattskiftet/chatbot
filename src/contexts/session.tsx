@@ -423,7 +423,11 @@ const SessionProvider = (properties: SessionProperties) => {
             const [mostRecentResponse] = responses.slice(-1);
 
             if (mostRecentResponse?.language) {
-                setLanguage!(mostRecentResponse.language);
+                const [updatedLanguage] = mostRecentResponse.language.split(
+                    '-'
+                );
+
+                setLanguage!(updatedLanguage);
             }
 
             setQueue((previousQueue) => {

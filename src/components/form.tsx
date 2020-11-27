@@ -1,9 +1,10 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import styled from 'styled-components';
 import {Textarea} from 'nav-frontend-skjema';
 import {Knapp as Button} from 'nav-frontend-knapper';
 import useDebouncedEffect from '../hooks/use-debounced-effect';
 import useSession from '../contexts/session';
+import useLanguage from '../contexts/language';
 
 const FormElement = styled.form`
     background: #f4f4f4;
@@ -27,6 +28,29 @@ const RestartButtonElement = styled(Button)`
     margin-right: 10px;
 `;
 
+const translations = {
+    your_message: {
+        en: 'Your message',
+        no: 'Din melding'
+    },
+    send: {
+        en: 'Send',
+        no: 'Send'
+    },
+    send_message: {
+        en: 'Send message',
+        no: 'Send melding'
+    },
+    restart_chat: {
+        en: 'Restart chat',
+        no: 'Start chat på nytt'
+    },
+    restart: {
+        en: 'Restart',
+        no: 'Start på nytt'
+    }
+};
+
 interface FormProperties {
     isObscured?: boolean;
     onSubmit?: (message: string) => void;
@@ -34,7 +58,9 @@ interface FormProperties {
 }
 
 const Form = ({isObscured, onSubmit, onRestart}: FormProperties) => {
+    const {translate} = useLanguage();
     const {id, conversation, sendPing} = useSession();
+    const localizations = useMemo(() => translate(translations), [translate]);
     const [message, setMessage] = useState<string>('');
     const conversationStatus = conversation?.state.chat_status;
     const messageMaxCharacters = conversation?.state.max_input_chars ?? 110;
@@ -81,7 +107,7 @@ const Form = ({isObscured, onSubmit, onRestart}: FormProperties) => {
         <FormElement onSubmit={handleSubmit}>
             <PaddingElement>
                 <Textarea
-                    aria-label='Din melding'
+                    aria-label={localizations.your_message}
                     name='message'
                     value={message}
                     maxLength={messageMaxCharacters}
@@ -92,23 +118,23 @@ const Form = ({isObscured, onSubmit, onRestart}: FormProperties) => {
 
                 <ActionsElement>
                     <Button
-                        aria-label='Send melding'
+                        aria-label={localizations.send_message}
                         htmlType='submit'
                         tabIndex={isObscured ? -1 : undefined}
                     >
-                        Send
+                        {localizations.send}
                     </Button>
 
                     {conversationStatus === 'virtual_agent' && (
                         <RestartButtonElement
                             mini
-                            aria-label='Start chat på nytt'
+                            aria-label={localizations.restart_chat}
                             htmlType='button'
                             type='flat'
                             tabIndex={isObscured ? -1 : undefined}
                             onClick={onRestart}
                         >
-                            Start på nytt
+                            {localizations.restart}
                         </RestartButtonElement>
                     )}
                 </ActionsElement>
