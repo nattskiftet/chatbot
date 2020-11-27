@@ -38,8 +38,9 @@ const HeaderElement = styled.div`
             `
             : ''}
 
-    ${TitleElement} {
+    &&& ${TitleElement} {
         font-size: 22px;
+        line-height: 1em;
         margin: auto;
         margin-left: 0;
         padding-left: 12px;
