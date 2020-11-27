@@ -9,9 +9,7 @@ import useSession from '../contexts/session';
 import {fullscreenMediaQuery} from '../configuration';
 import useLanguage from '../contexts/language';
 
-const TitleElement = styled(Innholdstittel)`
-    font-size: 22px;
-`;
+const TitleElement = styled(Innholdstittel)``;
 
 interface HeaderElementProperties {
     isHumanChat?: boolean;
@@ -41,6 +39,7 @@ const HeaderElement = styled.div`
             : ''}
 
     ${TitleElement} {
+        font-size: 22px;
         margin: auto;
         margin-left: 0;
         padding-left: 12px;

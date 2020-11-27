@@ -39,6 +39,8 @@ const ContainerElement = styled.div`
     position: fixed;
     right: 0;
     bottom: 0;
+    z-index: 999;
+    z-index: 999999;
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3), 0 5px 10px rgba(0, 0, 0, 0.1),
         0 5px 5px rgba(0, 0, 0, 0.1);
     overflow: hidden;
