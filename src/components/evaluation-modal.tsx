@@ -4,7 +4,12 @@ import {Textarea, RadioGruppe, Radio} from 'nav-frontend-skjema';
 import {Knapp} from 'nav-frontend-knapper';
 import useLanguage from '../contexts/language';
 import useSession from '../contexts/session';
-import Modal, {ModalProperties, TitleElement, TextElement} from './modal';
+import Modal, {
+    ModalProperties,
+    BoxElement,
+    TitleElement,
+    TextElement
+} from './modal';
 
 const ActionsElement = styled.div`
     margin-top: 20px;
@@ -92,44 +97,48 @@ const EvaluationModal = ({
             {...properties}
         >
             {isOpen && (
-                <form onSubmit={handleSubmit}>
-                    <TitleElement>{localizations.chat_has_ended}</TitleElement>
-                    <TextElement>
-                        {localizations.consider_evaluating}
-                    </TextElement>
+                <BoxElement>
+                    <form onSubmit={handleSubmit}>
+                        <TitleElement>
+                            {localizations.chat_has_ended}
+                        </TitleElement>
+                        <TextElement>
+                            {localizations.consider_evaluating}
+                        </TextElement>
 
-                    <RadioGruppe legend={localizations.your_rating}>
-                        <Radio
-                            readOnly
-                            label={localizations.yes}
-                            name='yes'
-                            value='1'
-                            checked={rating === '1'}
-                            onClick={handleRatingClick}
+                        <RadioGruppe legend={localizations.your_rating}>
+                            <Radio
+                                readOnly
+                                label={localizations.yes}
+                                name='yes'
+                                value='1'
+                                checked={rating === '1'}
+                                onClick={handleRatingClick}
+                            />
+                            <Radio
+                                readOnly
+                                label={localizations.no}
+                                name='no'
+                                value='0'
+                                checked={rating === '0'}
+                                onClick={handleRatingClick}
+                            />
+                        </RadioGruppe>
+
+                        <Textarea
+                            value={message}
+                            label={localizations.your_feedback}
+                            onChange={handleMessageChange}
                         />
-                        <Radio
-                            readOnly
-                            label={localizations.no}
-                            name='no'
-                            value='0'
-                            checked={rating === '0'}
-                            onClick={handleRatingClick}
-                        />
-                    </RadioGruppe>
 
-                    <Textarea
-                        value={message}
-                        label={localizations.your_feedback}
-                        onChange={handleMessageChange}
-                    />
-
-                    <ActionsElement>
-                        <ActionsSpacerElement />
-                        <Knapp kompakt mini htmlType='submit'>
-                            {localizations.submit}
-                        </Knapp>
-                    </ActionsElement>
-                </form>
+                        <ActionsElement>
+                            <ActionsSpacerElement />
+                            <Knapp kompakt mini htmlType='submit'>
+                                {localizations.submit}
+                            </Knapp>
+                        </ActionsElement>
+                    </form>
+                </BoxElement>
             )}
         </Modal>
     );

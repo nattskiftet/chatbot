@@ -58,15 +58,7 @@ const ButtonElement = styled.button`
 `;
 
 const ContentsElement = styled.div`
-    background: #fff;
-    max-height: 100%;
-    box-sizing: border-box;
-    overflow: auto;
-    padding: 20px 20px;
-    border-radius: 4px;
     margin: auto;
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.15),
-        0 1px 10px rgba(0, 0, 0, 0.1);
     transition: transform 0.2s, opacity 0.1s;
     transform: scale(0.8);
     opacity: 0;
@@ -77,6 +69,18 @@ const ContentsElement = styled.div`
             opacity: 1;
             transform: none;
         `};
+`;
+
+const BoxElement = styled.div`
+    background: #fff;
+    max-height: 100%;
+    box-sizing: border-box;
+    overflow: auto;
+    padding: 20px 20px;
+    border-radius: 4px;
+    margin: auto;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.15),
+        0 1px 10px rgba(0, 0, 0, 0.1);
 `;
 
 const TitleElement = styled(Systemtittel)`
@@ -145,6 +149,7 @@ const Modal = ({
 
 export {
     ModalProperties,
+    BoxElement,
     TitleElement,
     HeadingElement,
     TextElement,

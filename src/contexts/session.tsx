@@ -233,6 +233,18 @@ async function rateBoostSession(
     return response.data;
 }
 
+async function downloadBoostSession(
+    apiUrlBase: string,
+    conversationId: string
+): Promise<Blob> {
+    const response = await axios.post(apiUrlBase, {
+        command: 'DOWNLOAD',
+        conversation_id: conversationId
+    });
+
+    return new Blob([response.data], {type: 'text/plain;charset=utf-8'});
+}
+
 type BoostRequestResponse =
     | BoostStartRequestResponse
     | BoostResumeRequestResponse
@@ -259,6 +271,7 @@ interface Session {
     start?: () => Promise<void>;
     restart?: () => Promise<void>;
     finish?: () => Promise<void>;
+    download?: () => Promise<void>;
     sendMessage?: (message: string) => Promise<void>;
     sendAction?: (actionId: string) => Promise<void>;
     sendPing?: () => Promise<void>;
@@ -341,7 +354,7 @@ const SessionProvider = (properties: SessionProperties) => {
                     type: 'text',
                     message
                 }).catch((error) => {
-                    void handleError(error);
+                    handleError(error);
                 });
 
                 setPollMultiplier(0.1);
@@ -360,7 +373,7 @@ const SessionProvider = (properties: SessionProperties) => {
                     type: 'action_link',
                     id
                 }).catch((error) => {
-                    void handleError(error);
+                    handleError(error);
                 });
 
                 setPollMultiplier(0.1);
@@ -526,7 +539,7 @@ const SessionProvider = (properties: SessionProperties) => {
 
             setStatus('connected');
         } catch (error) {
-            void handleError(error);
+            handleError(error);
         }
 
         finishLoading();
@@ -570,6 +583,41 @@ const SessionProvider = (properties: SessionProperties) => {
         await remove();
         finishLoading();
     }, [remove, setIsLoading]);
+
+    const download = useCallback(async () => {
+        if (conversationId) {
+            try {
+                const blob = await downloadBoostSession(
+                    boostApiUrlBase,
+                    conversationId
+                );
+
+                const url = URL.createObjectURL(blob);
+                const anchor = document.createElement('a');
+
+                anchor.style.display = 'none';
+                anchor.setAttribute('href', url);
+                anchor.setAttribute(
+                    'download',
+                    `nav-chatlog-${new Date().getTime()}.txt`
+                );
+
+                if (typeof anchor.download === undefined) {
+                    anchor.setAttribute('target', '_blank');
+                }
+
+                document.body.append(anchor);
+                anchor.click();
+                anchor.remove();
+
+                setTimeout(() => {
+                    URL.revokeObjectURL(url);
+                }, 250);
+            } catch (error) {
+                handleError(error);
+            }
+        }
+    }, [boostApiUrlBase, conversationId]);
 
     useEffect(() => {
         if (conversationId) {
@@ -672,7 +720,8 @@ const SessionProvider = (properties: SessionProperties) => {
                 sendFeedback,
                 start,
                 restart,
-                finish
+                finish,
+                download
             }}
         />
     );
