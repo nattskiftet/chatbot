@@ -130,7 +130,7 @@ const ResponseItem = ({
                     </Conversation>
 
                     {displaySentIndicator && (
-                        <SubtextElement>{localizations.send}</SubtextElement>
+                        <SubtextElement>{localizations.sent}</SubtextElement>
                     )}
                 </>
             );
