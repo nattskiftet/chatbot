@@ -8,7 +8,26 @@ module.exports = {
             },
             module: {
                 rules: [
-                    {test: /\.ts|\.tsx$/, loader: 'ts-loader'},
+                    {
+                        test: /\.ts|\.tsx$/,
+                        use: [
+                            {
+                                loader: 'babel-loader',
+                                options: {
+                                    plugins: [
+                                        [
+                                            '@quickbaseoss/babel-plugin-styled-components-css-namespace',
+                                            {
+                                                cssNamespace: '#nav-chatbot'
+                                            }
+                                        ],
+                                        'babel-plugin-styled-components'
+                                    ]
+                                }
+                            },
+                            'ts-loader'
+                        ]
+                    },
                     {
                         test: /\.less$/,
                         use: ['style-loader', 'css-loader', 'less-loader']

@@ -1,5 +1,5 @@
 import React, {useRef, useEffect} from 'react';
-import styled from 'styled-components';
+import styled, {css} from 'styled-components';
 import {Systemtittel, Normaltekst} from 'nav-frontend-typografi';
 import finishIcon from '../assets/finish.svg';
 
@@ -25,10 +25,10 @@ const Element = styled.dialog`
 
     ${(properties: {isOpen?: boolean}) =>
         properties.isOpen &&
-        `
+        css`
             opacity: 1;
             pointer-events: all;
-        `}
+        `};
 `;
 
 const ButtonElement = styled.button`
@@ -73,10 +73,10 @@ const ContentsElement = styled.div`
 
     ${(properties: {isOpen?: boolean}) =>
         properties.isOpen &&
-        `
+        css`
             opacity: 1;
             transform: none;
-        `}
+        `};
 `;
 
 const TitleElement = styled(Systemtittel)`

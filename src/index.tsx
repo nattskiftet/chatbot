@@ -1,5 +1,5 @@
 import React, {useRef, useState, useEffect, useCallback} from 'react';
-import styled from 'styled-components';
+import styled, {css} from 'styled-components';
 import cookies from 'js-cookie';
 import delay from './utilities/delay';
 import useLanguage, {LanguageProvider} from './contexts/language';
@@ -51,13 +51,12 @@ const ContainerElement = styled.div`
     touch-action: manipulation;
 
     ${(properties: ContainerElement) =>
-        properties.isFullscreen
-            ? `
-                width: 100%;
-                height: 100%;
-                transform: translate3d(0,0,0);
-            `
-            : ''}
+        properties.isFullscreen &&
+        css`
+            width: 100%;
+            height: 100%;
+            transform: translate3d(0, 0, 0);
+        `};
 
     @media ${fullscreenMediaQuery} {
         width: 100%;
@@ -66,23 +65,20 @@ const ContainerElement = styled.div`
     }
 
     ${(properties: ContainerElement) =>
-        properties.isClosing || properties.isOpening
-            ? `
-                @media screen {
-                    height: 200px;
+        (properties.isClosing || properties.isOpening) &&
+        css`
+            @media screen {
+                height: 200px;
 
-                    ${
-                        properties.isFullscreen
-                            ? 'transform: translate3d(0, 220px, 0);'
-                            : 'transform: translate3d(-20px, 220px, 0);'
-                    }
-                }
+                ${properties.isFullscreen
+                    ? 'transform: translate3d(0, 220px, 0);'
+                    : 'transform: translate3d(-20px, 220px, 0);'}
+            }
 
-                @media ${fullscreenMediaQuery} {
-                    transform: translate3d(0, 220px, 0);
-                }
-            `
-            : ''}
+            @media ${fullscreenMediaQuery} {
+                transform: translate3d(0, 220px, 0);
+            }
+        `};
 `;
 
 const PaddingElement = styled.div`
@@ -319,7 +315,7 @@ const Chat = ({analyticsCallback}: ChatProperties) => {
     const isModalOpen = isFinishing || isEvaluating;
 
     return (
-        <>
+        <div id='nav-chatbot'>
             <OpenButton
                 {...{isOpen, isOpening, unreadCount}}
                 onClick={handleOpen}
@@ -394,7 +390,7 @@ const Chat = ({analyticsCallback}: ChatProperties) => {
                     />
                 </ContainerElement>
             )}
-        </>
+        </div>
     );
 };
 

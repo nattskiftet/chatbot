@@ -1,5 +1,5 @@
 import React, {useMemo} from 'react';
-import styled from 'styled-components';
+import styled, {css} from 'styled-components';
 import {Normaltekst, Undertekst} from 'nav-frontend-typografi';
 import fridaIcon from '../assets/frida.svg';
 import useSession from '../contexts/session';
@@ -16,6 +16,8 @@ const ButtonElement = styled.button`
     appearance: none;
     background: #fff;
     padding: 8px 15px;
+    margin-right: ${openButtonAvatarSizeNumber / 2}px;
+    margin-bottom: ${openButtonAvatarSizeNumber / 5}px;
     position: fixed;
     bottom: 25px;
     right: 25px;
@@ -24,24 +26,19 @@ const ButtonElement = styled.button`
     border-radius: 30px;
     transform: ${(properties: ButtonElementProperties) =>
         properties.isVisible
-            ? 'scale(1)'
-            : `scale(0.8) translate3d(0,${
+            ? css`scale(1)`
+            : css`scale(0.8) translate3d(0,${
                   openButtonAvatarSizeNumber * 2
               }px,0)`};
     opacity: ${(properties: ButtonElementProperties) =>
         properties.isVisible ? '1' : '0'};
     transition: ${(properties: ButtonElementProperties) =>
         properties.isVisible
-            ? 'transform 0.5s, opacity 0.2s 0.3s'
-            : 'transform 0.2s, opacity 0.1s'};
+            ? css`transform 0.5s, opacity 0.2s 0.3s`
+            : css`transform 0.2s, opacity 0.1s`};
     box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4),
         0 0 0 2px rgba(255, 255, 255, 1), 0 1px 4px rgba(0, 0, 0, 0.5),
         0 4px 10px rgba(0, 0, 0, 0.2);
-
-    &&& {
-        margin-right: ${openButtonAvatarSizeNumber / 2}px;
-        margin-bottom: ${openButtonAvatarSizeNumber / 5}px;
-    }
 
     &:hover {
         background-color: #005b82;

@@ -1,5 +1,5 @@
 import React, {useMemo} from 'react';
-import styled from 'styled-components';
+import styled, {css} from 'styled-components';
 import {Normaltekst} from 'nav-frontend-typografi';
 import useLanguage from '../contexts/language';
 
@@ -77,31 +77,30 @@ const MessageBubble = styled.div`
     }
 
     ${(properties: MessageBubbleProperties) =>
-        properties.isThinking
-            ? `
-                &:before {
-                    content: '';
-                    background-color: inherit;
-                    width: 5px;
-                    height: 5px;
-                    border-radius: 5px;
-                    position: absolute;
-                    bottom: -2px;
-                    left: -7px;
-                }
+        properties.isThinking &&
+        css`
+            &:before {
+                content: '';
+                background-color: inherit;
+                width: 5px;
+                height: 5px;
+                border-radius: 5px;
+                position: absolute;
+                bottom: -2px;
+                left: -7px;
+            }
 
-                &:after {
-                    content: '';
-                    background-color: inherit;
-                    width: 12px;
-                    height: 12px;
-                    border-radius: 12px;
-                    position: absolute;
-                    bottom: 1px;
-                    left: -2px;
-                }
-            `
-            : ''}
+            &:after {
+                content: '';
+                background-color: inherit;
+                width: 12px;
+                height: 12px;
+                border-radius: 12px;
+                position: absolute;
+                bottom: 1px;
+                left: -2px;
+            }
+        `};
 `;
 
 const BubbleLeftElement = styled(MessageBubble)`

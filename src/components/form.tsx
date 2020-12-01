@@ -24,6 +24,7 @@ const ActionsElement = styled.div`
 `;
 
 const RestartButtonElement = styled(Button)`
+    background: none;
     padding: 0 15px;
     margin-right: 10px;
 `;

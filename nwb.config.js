@@ -45,7 +45,23 @@ module.exports = {
                 rules: [
                     {
                         test: /\.ts|\.tsx$/,
-                        loader: 'ts-loader'
+                        use: [
+                            {
+                                loader: 'babel-loader',
+                                options: {
+                                    plugins: [
+                                        [
+                                            '@quickbaseoss/babel-plugin-styled-components-css-namespace',
+                                            {
+                                                cssNamespace: '#nav-chatbot'
+                                            }
+                                        ],
+                                        'babel-plugin-styled-components'
+                                    ]
+                                }
+                            },
+                            'ts-loader'
+                        ]
                     },
                     {
                         test: /\.less$/,
