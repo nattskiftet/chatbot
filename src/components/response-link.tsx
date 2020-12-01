@@ -4,10 +4,12 @@ import {RadioPanelGruppe} from 'nav-frontend-skjema';
 import useLoader from '../hooks/use-loader';
 
 import {
-    Session,
     BoostResponse,
     BoostResponseElementLinksItem
 } from '../contexts/session';
+
+import {linkDisableTimeout, englishButtonText} from '../configuration';
+import Spinner, {SpinnerElement} from './spinner';
 
 import Message, {
     avatarSize,
@@ -15,9 +17,6 @@ import Message, {
     ContainerElement,
     AvatarElement
 } from './message';
-
-import {linkDisableTimeout} from '../configuration';
-import Spinner, {SpinnerElement} from './spinner';
 
 const LinkButtonElement = styled(RadioPanelGruppe)`
     max-width: ${conversationSideWidth};
@@ -45,7 +44,7 @@ interface ResponseLinkProperties {
     response: BoostResponse;
     link: BoostResponseElementLinksItem;
     tabIndex?: number;
-    onAction?: Session['sendAction'];
+    onAction?: (link: BoostResponseElementLinksItem) => Promise<void>;
 }
 
 const ResponseLink = ({
@@ -61,13 +60,13 @@ const ResponseLink = ({
     const handleAction = useCallback(async () => {
         if (!isLoading && onAction) {
             const finishLoading = setIsLoading();
-            await onAction(link.id);
+            await onAction(link);
             finishLoading();
 
             setIsSelected(true);
             setIsDisabled(true);
         }
-    }, [link.id, isLoading, onAction, setIsLoading]);
+    }, [link, isLoading, onAction, setIsLoading]);
 
     const handleKeyPress = useCallback(
         (event) => {
@@ -103,7 +102,10 @@ const ResponseLink = ({
     }
 
     return (
-        <ContainerElement onKeyPress={handleKeyPress}>
+        <ContainerElement
+            lang={link.text === englishButtonText ? 'en-US' : undefined}
+            onKeyPress={handleKeyPress}
+        >
             <AvatarElement />
             <LinkButtonElement
                 name={link.text}

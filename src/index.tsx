@@ -3,7 +3,11 @@ import styled, {css} from 'styled-components';
 import cookies from 'js-cookie';
 import delay from './utilities/delay';
 import useLanguage, {LanguageProvider} from './contexts/language';
-import useSession, {SessionProvider} from './contexts/session';
+import useSession, {
+    SessionProvider,
+    BoostResponseElementLinksItem
+} from './contexts/session';
+
 import Header from './components/header';
 import TypingIndicator from './components/typing-indicator';
 import OpenButton from './components/open-button';
@@ -13,8 +17,9 @@ import Form from './components/form';
 import Response from './components/response';
 import FinishModal from './components/finish-modal';
 import EvaluationModal from './components/evaluation-modal';
-
 import {
+    englishButtonText,
+    englishButtonResponse,
     containerWidth,
     containerHeight,
     fullscreenMediaQuery,
@@ -166,11 +171,14 @@ const Chat = ({analyticsCallback}: ChatProperties) => {
     }, []);
 
     const handleAction = useCallback(
-        async (id: string) => {
-            await sendAction!(id);
+        async (link: BoostResponseElementLinksItem) => {
+            await (link?.text === englishButtonText
+                ? sendMessage!(englishButtonResponse)
+                : sendAction!(link.id));
+
             scrollToBottom();
         },
-        [sendAction, scrollToBottom]
+        [sendMessage, sendAction, scrollToBottom]
     );
 
     const handleSubmit = useCallback(

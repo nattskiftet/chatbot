@@ -23,6 +23,8 @@ const botResponseRevealDelayBuffer = botResponseRevealDelay / 2;
 const minimumPollTimeout = 1000;
 const maximumPollTimeout = 2500;
 const authenticationPrefix = 'Init:Auth:';
+const englishButtonText = 'For English, click here';
+const englishButtonResponse = 'English, please';
 
 const fullscreenMediaQuery = `(max-width: ${
     containerWidthNumber + 100
@@ -46,5 +48,7 @@ export {
     minimumPollTimeout,
     maximumPollTimeout,
     authenticationPrefix,
+    englishButtonText,
+    englishButtonResponse,
     fullscreenMediaQuery
 };
