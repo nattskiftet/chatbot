@@ -260,6 +260,7 @@ const Chat = ({analyticsCallback}: ChatProperties) => {
     useEffect(() => {
         if (isOpen && (status === 'disconnected' || status === 'ended')) {
             void start!();
+            setUnreadCount(0);
         }
     }, [start, isOpen, status]);
 
@@ -282,10 +283,10 @@ const Chat = ({analyticsCallback}: ChatProperties) => {
     }, [status, responses]);
 
     useEffect(() => {
-        if (updateCount > 1) {
+        if (!isOpen && updateCount > 1) {
             setUnreadCount((number) => number + 1);
         }
-    }, [updateCount]);
+    }, [isOpen, updateCount]);
 
     useEffect(() => {
         scrollToBottom();
