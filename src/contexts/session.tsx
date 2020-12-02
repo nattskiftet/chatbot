@@ -26,7 +26,6 @@ interface BoostConversation {
     reference: string;
     state: {
         chat_status: string;
-        allow_delete_conversation: boolean;
         human_is_typing: boolean;
         max_input_chars: number;
     };
@@ -196,16 +195,16 @@ async function pingBoostSession(
     return response.data;
 }
 
-interface BoostDeleteRequestResponse {
+interface BoostStopRequestResponse {
     conversation: BoostConversation;
 }
 
-async function deleteBoostSession(
+async function stopBoostSession(
     apiUrlBase: string,
     conversationId: string
-): Promise<BoostDeleteRequestResponse> {
+): Promise<BoostStopRequestResponse> {
     const response = await axios.post(apiUrlBase, {
-        command: 'DELETE',
+        command: 'STOP',
         conversation_id: conversationId
     });
 
@@ -303,7 +302,6 @@ const SessionProvider = (properties: SessionProperties) => {
 
     const conversationId = conversation?.id;
     const conversationState = conversation?.state;
-    const canDeleteConversation = conversationState?.allow_delete_conversation;
 
     const [responses, setResponses] = useState<BoostResponse[] | undefined>();
     const [queue, setQueue] = useState<BoostResponse>();
@@ -551,14 +549,14 @@ const SessionProvider = (properties: SessionProperties) => {
         setResponses(undefined);
         setQueue(undefined);
 
-        if (conversationId && canDeleteConversation) {
-            await deleteBoostSession(boostApiUrlBase, conversationId).catch(
+        if (conversationId) {
+            await stopBoostSession(boostApiUrlBase, conversationId).catch(
                 (error) => {
                     console.error(error);
                 }
             );
         }
-    }, [boostApiUrlBase, conversationId, canDeleteConversation]);
+    }, [boostApiUrlBase, conversationId]);
 
     const restart = useCallback(async () => {
         const finishLoading = setIsLoading();
