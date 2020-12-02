@@ -128,6 +128,9 @@ const EvaluationModal = ({
                         <Textarea
                             value={message}
                             label={localizations.your_feedback}
+                            tellerTekst={(count, maxCount) =>
+                                `${count}/${maxCount}`
+                            }
                             onChange={handleMessageChange}
                         />
 

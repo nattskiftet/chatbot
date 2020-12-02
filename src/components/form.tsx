@@ -113,6 +113,7 @@ const Form = ({isObscured, onSubmit, onRestart}: FormProperties) => {
                     value={message}
                     maxLength={messageMaxCharacters}
                     tabIndex={isObscured ? -1 : undefined}
+                    tellerTekst={(count, maxCount) => `${count}/${maxCount}`}
                     onChange={handleChange}
                     onKeyDown={handleKeyDown}
                 />
