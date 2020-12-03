@@ -11,6 +11,10 @@ import Modal, {
 } from './modal';
 import useSession from '../contexts/session';
 
+const ContainerElement = styled.div`
+    margin: auto;
+`;
+
 const ButtonElement = styled(Knapp)`
     margin-left: 5px;
 `;
@@ -78,52 +82,54 @@ const FinishModal = ({
             {...{isOpen, onConfirm}}
             {...properties}
         >
-            <BoxElement>
-                <TextElement>
-                    {localizations.are_you_sure_you_want_to_end}
-                </TextElement>
+            <ContainerElement>
+                <BoxElement>
+                    <TextElement>
+                        {localizations.are_you_sure_you_want_to_end}
+                    </TextElement>
 
-                <ActionsElement>
+                    <ActionsElement>
+                        <ButtonElement
+                            mini
+                            kompakt
+                            tabIndex={isOpen ? undefined : -1}
+                            htmlType='button'
+                            type='flat'
+                            aria-label={localizations.cancel_termination}
+                            onClick={onCancel}
+                        >
+                            {localizations.cancel}
+                        </ButtonElement>
+
+                        <ButtonElement
+                            mini
+                            kompakt
+                            tabIndex={isOpen ? undefined : -1}
+                            htmlType='button'
+                            type='hoved'
+                            aria-label={localizations.confirm_chat_termination}
+                            onClick={onConfirm}
+                        >
+                            {localizations.yes_end_conversation}
+                        </ButtonElement>
+                    </ActionsElement>
+                </BoxElement>
+
+                <SecondaryActions>
                     <ButtonElement
-                        mini
                         kompakt
                         tabIndex={isOpen ? undefined : -1}
                         htmlType='button'
-                        type='flat'
-                        aria-label={localizations.cancel_termination}
-                        onClick={onCancel}
+                        aria-label={localizations.download_conversation}
+                        onClick={handleDownload}
                     >
-                        {localizations.cancel}
+                        <DownloadElement
+                            dangerouslySetInnerHTML={{__html: downloadIcon}}
+                        />
+                        <span>{localizations.download_conversation}</span>
                     </ButtonElement>
-
-                    <ButtonElement
-                        mini
-                        kompakt
-                        tabIndex={isOpen ? undefined : -1}
-                        htmlType='button'
-                        type='hoved'
-                        aria-label={localizations.confirm_chat_termination}
-                        onClick={onConfirm}
-                    >
-                        {localizations.yes_end_conversation}
-                    </ButtonElement>
-                </ActionsElement>
-            </BoxElement>
-
-            <SecondaryActions>
-                <ButtonElement
-                    kompakt
-                    tabIndex={isOpen ? undefined : -1}
-                    htmlType='button'
-                    aria-label={localizations.download_conversation}
-                    onClick={handleDownload}
-                >
-                    <DownloadElement
-                        dangerouslySetInnerHTML={{__html: downloadIcon}}
-                    />
-                    <span>{localizations.download_conversation}</span>
-                </ButtonElement>
-            </SecondaryActions>
+                </SecondaryActions>
+            </ContainerElement>
         </Modal>
     );
 };

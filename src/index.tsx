@@ -3,6 +3,7 @@ import styled, {css} from 'styled-components';
 import cookies from 'js-cookie';
 import delay from './utilities/delay';
 import useLanguage, {LanguageProvider} from './contexts/language';
+
 import useSession, {
     SessionProvider,
     BoostResponseElementLinksItem
@@ -17,6 +18,7 @@ import Form from './components/form';
 import Response from './components/response';
 import FinishModal from './components/finish-modal';
 import EvaluationModal from './components/evaluation-modal';
+
 import {
     englishButtonText,
     englishButtonResponse,
@@ -228,10 +230,6 @@ const Chat = ({analyticsCallback}: ChatProperties) => {
             shouldFinish = true;
         } else if (isEvaluating) {
             shouldFinish = true;
-        } else if (isFinishing) {
-            if (!analyticsCallback) {
-                shouldFinish = true;
-            }
         }
 
         if (shouldFinish) {
@@ -244,14 +242,7 @@ const Chat = ({analyticsCallback}: ChatProperties) => {
         } else {
             setIsFinishing(true);
         }
-    }, [
-        isFinishing,
-        isEvaluating,
-        analyticsCallback,
-        responsesLength,
-        finish,
-        handleClose
-    ]);
+    }, [isFinishing, isEvaluating, responsesLength, finish, handleClose]);
 
     function handleCancelFinish() {
         setIsFinishing(false);
@@ -395,6 +386,7 @@ const Chat = ({analyticsCallback}: ChatProperties) => {
 
                     <EvaluationModal
                         isOpen={isEvaluating}
+                        onFeedback={analyticsCallback}
                         onConfirm={handleFinish}
                     />
                 </ContainerElement>
