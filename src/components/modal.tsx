@@ -44,6 +44,7 @@ const ButtonElement = styled.button`
     position: absolute;
     top: 0;
     right: 0;
+    z-index: 10;
 
     svg {
         width: 100%;
@@ -58,10 +59,12 @@ const ButtonElement = styled.button`
 `;
 
 const ContentsElement = styled.div`
+    height: 100%;
     margin: auto;
     transition: transform 0.2s, opacity 0.1s;
     transform: scale(0.8);
     opacity: 0;
+    display: flex;
 
     ${(properties: {isOpen?: boolean}) =>
         properties.isOpen &&
@@ -75,12 +78,34 @@ const BoxElement = styled.div`
     background: #fff;
     max-height: 100%;
     box-sizing: border-box;
+    position: relative;
     overflow: auto;
-    padding: 20px 20px;
+    padding: 0 20px;
     border-radius: 4px;
     margin: auto;
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.15),
         0 1px 10px rgba(0, 0, 0, 0.1);
+
+    &::before,
+    &::after {
+        content: '';
+        width: 100%;
+        height: 20px;
+        position: sticky;
+        position: -webkit-sticky;
+        z-index: 1;
+        display: block;
+    }
+
+    &::before {
+        background: linear-gradient(#fff 25%, rgba(255, 255, 255, 0) 100%);
+        top: 0;
+    }
+
+    &::after {
+        background: linear-gradient(rgba(255, 255, 255, 0) 0%, #fff 75%);
+        bottom: 0;
+    }
 `;
 
 const TitleElement = styled(Systemtittel)`
