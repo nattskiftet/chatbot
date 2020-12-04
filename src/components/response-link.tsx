@@ -111,7 +111,6 @@ const ResponseLink = ({
                 name={link.text}
                 radios={[
                     {
-                        id: link.text,
                         value: link.text,
                         disabled: tabIndex === -1,
                         label: (
