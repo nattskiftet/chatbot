@@ -2,20 +2,22 @@
 
 ## Bruk
 **Nytt fra v.1.3.0**<br>
-Chatbot Frida er nå implementert i [Nav-dekoratøren](https://github.com/navikt/nav-dekoratoren).
-Chatbot'en kan aktiveres i appene via et parameter til dekoratøren. Se dekoratørens readme for hvordan dette gjøres.
-Komponenten fra NPM-pakka skal ikke benyttes i apper som også benytter Nav-dekoratøren, da dette vil komme i konflikt med dekoratørens chatbot-instans.
+Chatbot Frida er nå implementert i [nav-dekoratoren](https://github.com/navikt/nav-dekoratoren).
+
+Chatbot-en kan aktiveres i appene via et parameter til dekoratøren. Se dekoratørens [`readme.md`](https://github.com/navikt/nav-dekoratoren/blob/master/README.md) for hvordan dette gjøres.
+
+Komponenten fra npm-pakka skal ikke benyttes i apper som også benytter https://github.com/navikt/nav-dekoratoren, da dette vil komme i konflikt med dekoratørens chatbot-instans.
 
 ## Installasjon
-Apper uten Nav-dekoratøren kan ta i bruk Chatbot med NPM-pakka.
+Apper uten `nav-dekoratoren` kan ta i bruk Chatbot med npm-pakka.
 ```sh
 npm i @navikt/nav-chatbot
 ```
 ```javascript
-import NAVChatBot from '@navikt/nav-chatbot';
-<NAVChatBot/>
+import Chatbot from '@navikt/nav-chatbot';
+<Chatbot/>
 // eller med options (defaults er definert nedenfor)
-<NAVChatBot
+<Chatbot
     boostApiUrlBase='https://navtest.boost.ai/api/chat/v2'
     analyticsCallback={console.log}
 />
