@@ -171,7 +171,7 @@ const EvaluationModal = ({
     const {language, translate} = useLanguage();
     const {sendFeedback} = useSession();
     const [rating, setRating] = useState<string>();
-    const [reasons, setReasons] = useState<string[]>([]);
+    const [areas, setAreas] = useState<string[]>([]);
     const [satisfaction, setSatisfaction] = useState<string>();
     const [message, setMessage] = useState<string>('');
     const localizations = useMemo(() => translate(translations), [translate]);
@@ -188,9 +188,9 @@ const EvaluationModal = ({
         const target = event.target as HTMLInputElement;
 
         if (target.checked) {
-            setReasons((previousState) => previousState.concat(target.value));
+            setAreas((previousState) => previousState.concat(target.value));
         } else {
-            setReasons((previousState) =>
+            setAreas((previousState) =>
                 previousState.filter((value) => value !== target.value)
             );
         }
@@ -222,36 +222,10 @@ const EvaluationModal = ({
 
         if (onFeedback) {
             onFeedback('tilbakemelding', {
-                komponent: 'frida',
-                english: language === 'en'
+                komponent: 'chatbot-test',
+                isEnglish: language === 'en',
+                responses: {rating, areas, satisfaction}
             });
-
-            if (rating) {
-                onFeedback('tilbakemelding', {
-                    komponent: 'frida',
-                    spørsmål: 'Fikk du svar på det du lurte på?',
-                    svar: rating
-                        .replace('1', translations.yes.no)
-                        .replace('0.5', translations.partly.no)
-                        .replace('0', translations.no.no)
-                });
-            }
-
-            if (reasons) {
-                onFeedback('tilbakemelding', {
-                    komponent: 'frida',
-                    spørsmål: 'Hva kom du hit for å gjøre?',
-                    svar: reasons
-                });
-            }
-
-            if (satisfaction) {
-                onFeedback('tilbakemelding', {
-                    komponent: 'frida',
-                    spørsmål: 'Er du fornøyd med hjelpen du fikk?',
-                    svar: satisfaction
-                });
-            }
         }
 
         onConfirm!();
@@ -271,7 +245,7 @@ const EvaluationModal = ({
         <Checkbox
             readOnly
             {...{label, value}}
-            checked={reasons.includes(value)}
+            checked={areas.includes(value)}
             onClick={handleReasonClick}
         />
     );
