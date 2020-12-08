@@ -222,8 +222,8 @@ const EvaluationModal = ({
 
         if (onFeedback) {
             onFeedback('tilbakemelding', {
-                komponent: 'chatbot-test',
-                isEnglish: language === 'en',
+                komponent: 'chatbot',
+                english: language === 'en',
                 responses: {rating, areas, satisfaction}
             });
         }
